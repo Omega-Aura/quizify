@@ -24,7 +24,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  signup: (email: string, password: string, name: string, role: string) => Promise<User>;
+  signup: (email: string, password: string, name: string, role: string, hostKey?: string) => Promise<User>;
   logout: () => void;
 }
 
@@ -77,12 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(
-    async (email: string, password: string, name: string, role: string): Promise<User> => {
+    async (email: string, password: string, name: string, role: string, hostKey?: string): Promise<User> => {
       const data = await api.post<{ token: string; user: User }>('/api/auth/signup', {
         email,
         password,
         name,
         role,
+        hostKey,
       });
       saveAuth(data.token, data.user);
       return data.user;

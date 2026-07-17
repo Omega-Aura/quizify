@@ -13,7 +13,12 @@ const signupSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(1, 'Name is required').max(50),
   role: z.enum(['HOST', 'PARTICIPANT']).default('PARTICIPANT'),
+  hostKey: z.string().optional(),
 });
+
+// Secret required to sign up as a HOST. Set HOST_SIGNUP_KEY in production;
+// falls back to a default for local dev.
+const HOST_SIGNUP_KEY = process.env.HOST_SIGNUP_KEY || 'igem@demo';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -30,7 +35,11 @@ authRoutes.post('/signup', async (c) => {
     return c.json({ message: result.error.issues[0].message }, 400);
   }
 
-  const { email, password, name, role } = result.data;
+  const { email, password, name, role, hostKey } = result.data;
+
+  if (role === 'HOST' && hostKey !== HOST_SIGNUP_KEY) {
+    return c.json({ message: 'Invalid host key' }, 403);
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

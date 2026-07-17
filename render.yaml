@@ -31,6 +31,9 @@ services:
       # Your deployed frontend URL, e.g. https://quizify-web.onrender.com
       - key: FRONTEND_URL
         sync: false
+      # Secret required to sign up as a HOST — set to your own value, not the repo default
+      - key: HOST_SIGNUP_KEY
+        sync: false
 
   # ─── Frontend: Next.js ─────────────────────────────────────────────────
   - type: web

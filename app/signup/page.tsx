@@ -12,6 +12,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'HOST' | 'PARTICIPANT'>('PARTICIPANT');
+  const [hostKey, setHostKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const user = await signup(email, password, name, role);
+      const user = await signup(email, password, name, role, role === 'HOST' ? hostKey : undefined);
       router.push(user.role === 'HOST' ? '/dashboard' : '/');
     } catch (err: any) {
       setError(err.message || 'Signup failed');
@@ -82,6 +83,21 @@ export default function SignupPage() {
               </button>
             </div>
           </div>
+
+          {role === 'HOST' && (
+            <div>
+              <label htmlFor="signup-host-key" className="input-label">Host key</label>
+              <input
+                id="signup-host-key"
+                type="password"
+                value={hostKey}
+                onChange={(e) => setHostKey(e.target.value)}
+                className="input-field"
+                placeholder="Enter the host access key"
+                required
+              />
+            </div>
+          )}
 
           <div>
             <label htmlFor="signup-name" className="input-label">Name</label>
