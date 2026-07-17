@@ -55,7 +55,7 @@ const CARD_CLASSES_DISABLED = [
 // ─── Confetti helper ─────────────────────────────────────────────────
 
 function spawnConfetti() {
-  const colors = ['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#a855f7', '#ec4899'];
+  const colors = ['#f4586a', '#3d8bff', '#f7b53b', '#43cf8e', '#2563eb', '#e23b50'];
   for (let i = 0; i < 40; i++) {
     const el = document.createElement('div');
     el.className = 'confetti-particle';
@@ -215,11 +215,11 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center animate-fade-in">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center animate-pulse-slow">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-brand-600 flex items-center justify-center animate-pulse-slow">
             <span className="text-3xl">🎮</span>
           </div>
           <h1 className="text-2xl font-bold mb-2">Get Ready!</h1>
-          <p className="text-white/40">Waiting for the host to start...</p>
+          <p className="text-ink/40">Waiting for the host to start...</p>
           <div className="mt-8 flex items-center justify-center gap-1">
             {[0, 1, 2].map((i) => (
               <div key={i} className="w-3 h-3 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
@@ -237,7 +237,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
         {/* Top bar with timer and progress */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-white/40">
+            <span className="text-sm text-ink/40">
               Q{(question?.index ?? 0) + 1}/{question?.totalQuestions ?? 0}
             </span>
           </div>
@@ -245,26 +245,26 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
           {/* Countdown */}
           <div className="relative w-16 h-16">
             <svg className="countdown-ring w-full h-full" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,0.1)" />
+              <circle cx="50" cy="50" r="45" stroke="rgba(23,26,46,0.1)" />
               <circle
                 cx="50"
                 cy="50"
                 r="45"
-                stroke={timeLeft <= 5 ? '#ef4444' : timeLeft <= 10 ? '#eab308' : '#8b5cf6'}
+                stroke={timeLeft <= 5 ? '#f4586a' : timeLeft <= 10 ? '#f7b53b' : '#3d8bff'}
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 className="transition-all duration-100"
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className={`text-lg font-bold ${timeLeft <= 5 ? 'text-red-400' : 'text-white'}`} aria-live="polite">
+              <span className={`text-lg font-bold ${timeLeft <= 5 ? 'text-red-600' : 'text-ink'}`} aria-live="polite">
                 {Math.ceil(timeLeft)}
               </span>
             </div>
           </div>
 
-          <div className="text-sm text-white/40">
-            Score: <span className="text-brand-300 font-bold">{totalScore}</span>
+          <div className="text-sm text-ink/40">
+            Score: <span className="text-brand-600 font-bold">{totalScore}</span>
           </div>
         </div>
 
@@ -294,7 +294,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
                   font-bold text-lg sm:text-xl text-white
                   transition-all duration-200
                   ${isDisabled ? CARD_CLASSES_DISABLED[i] : CARD_CLASSES[i]}
-                  ${isSelected ? 'ring-4 ring-white scale-[0.97]' : ''}
+                  ${isSelected ? 'ring-4 ring-ink/60 scale-[0.97]' : ''}
                   ${!isDisabled ? 'active:scale-[0.95] cursor-pointer' : 'cursor-default'}
                 `}
                 aria-label={`Answer: ${answer.text}`}
@@ -312,7 +312,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
         {/* Answered state */}
         {phase === 'ANSWERED' && (
           <div className="text-center mt-6 animate-fade-in">
-            <p className="text-white/50">Answer locked in! Waiting for reveal...</p>
+            <p className="text-ink/50">Answer locked in! Waiting for reveal...</p>
           </div>
         )}
       </div>
@@ -333,20 +333,20 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
             {result.isCorrect ? '🎉' : '😅'}
           </div>
 
-          <h2 className={`text-3xl font-bold mb-2 ${result.isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+          <h2 className={`text-3xl font-bold mb-2 ${result.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
             {result.isCorrect ? 'Correct!' : 'Not quite!'}
           </h2>
 
           {result.isCorrect && (
-            <p className="text-2xl font-bold text-brand-300 mb-4">
+            <p className="text-2xl font-bold text-brand-600 mb-4">
               +{result.yourPoints} points
             </p>
           )}
 
           {/* Show correct answer if wrong */}
           {!result.isCorrect && question && (
-            <p className="text-white/50 mb-4">
-              Correct answer: <span className="text-green-400 font-medium">
+            <p className="text-ink/50 mb-4">
+              Correct answer: <span className="text-green-600 font-medium">
                 {question.answers.find((a) => result.correctIndices.includes(a.index))?.text}
               </span>
             </p>
@@ -354,7 +354,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
 
           {/* Answer distribution */}
           <div className="glass-card p-5 mt-6">
-            <h3 className="text-sm text-white/40 mb-3">Answer Distribution</h3>
+            <h3 className="text-sm text-ink/40 mb-3">Answer Distribution</h3>
             <div className="space-y-2">
               {question?.answers.map((answer, i) => {
                 const count = result.answerCounts[answer.index] || 0;
@@ -365,10 +365,10 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
                 return (
                   <div key={i} className="flex items-center gap-3">
                     <span className="text-sm w-6">{SHAPES[i]}</span>
-                    <div className="flex-1 h-8 bg-white/[0.05] rounded-lg overflow-hidden relative">
+                    <div className="flex-1 h-8 bg-ink/[0.05] rounded-lg overflow-hidden relative">
                       <div
                         className={`h-full rounded-lg transition-all duration-1000 ${
-                          isCorrect ? 'bg-green-500/60' : 'bg-white/10'
+                          isCorrect ? 'bg-green-500/60' : 'bg-ink/10'
                         }`}
                         style={{ width: `${pct}%` }}
                       />
@@ -376,15 +376,15 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
                         {answer.text} ({count})
                       </span>
                     </div>
-                    {isCorrect && <span className="text-green-400 text-sm">✓</span>}
+                    {isCorrect && <span className="text-green-600 text-sm">✓</span>}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <p className="mt-6 text-sm text-white/30">
-            Total score: <span className="text-brand-300 font-bold">{totalScore}</span>
+          <p className="mt-6 text-sm text-ink/30">
+            Total score: <span className="text-brand-600 font-bold">{totalScore}</span>
           </p>
         </div>
       </div>
@@ -397,8 +397,8 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center max-w-md w-full">
           <h2 className="text-2xl font-bold mb-2 animate-fade-in">🏆 Leaderboard</h2>
-          <p className="text-white/40 mb-6 animate-fade-in">
-            You&apos;re ranked <span className="text-brand-300 font-bold">#{leaderboard.yourRank}</span>
+          <p className="text-ink/40 mb-6 animate-fade-in">
+            You&apos;re ranked <span className="text-brand-600 font-bold">#{leaderboard.yourRank}</span>
           </p>
 
           <div className="glass-card overflow-hidden">
@@ -412,18 +412,18 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
                   i === 0 ? 'bg-yellow-500 text-black' :
                   i === 1 ? 'bg-slate-400 text-black' :
                   i === 2 ? 'bg-orange-700 text-white' :
-                  'bg-white/10 text-white/50'
+                  'bg-ink/10 text-ink/50'
                 }`}>
                   {i + 1}
                 </span>
                 <span className="flex-1 font-medium text-left truncate">{entry.nickname}</span>
-                <span className="font-bold text-brand-300">{entry.totalScore}</span>
+                <span className="font-bold text-brand-600">{entry.totalScore}</span>
               </div>
             ))}
           </div>
 
           <div className="mt-6 flex items-center justify-center gap-1 animate-fade-in">
-            <p className="text-sm text-white/30">Next question coming up...</p>
+            <p className="text-sm text-ink/30">Next question coming up...</p>
           </div>
         </div>
       </div>
@@ -441,10 +441,10 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
             {myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '🎮'}
           </div>
           <h1 className="text-4xl font-extrabold mb-2 text-gradient">Game Over!</h1>
-          <p className="text-xl text-white/50 mb-2">
-            You finished <span className="text-brand-300 font-bold">#{myRank || '?'}</span>
+          <p className="text-xl text-ink/50 mb-2">
+            You finished <span className="text-brand-600 font-bold">#{myRank || '?'}</span>
           </p>
-          <p className="text-3xl font-bold text-brand-300 mb-8">{totalScore} pts</p>
+          <p className="text-3xl font-bold text-brand-600 mb-8">{totalScore} pts</p>
 
           <div className="glass-card overflow-hidden mb-8">
             {finalLeaderboard.slice(0, 10).map((entry, i) => (
@@ -456,12 +456,12 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
                   i === 0 ? 'bg-yellow-500 text-black' :
                   i === 1 ? 'bg-slate-400 text-black' :
                   i === 2 ? 'bg-orange-700 text-white' :
-                  'bg-white/10 text-white/50'
+                  'bg-ink/10 text-ink/50'
                 }`}>
                   {i + 1}
                 </span>
                 <span className="flex-1 font-medium text-left truncate">{entry.nickname}</span>
-                <span className="font-bold text-brand-300">{entry.totalScore}</span>
+                <span className="font-bold text-brand-600">{entry.totalScore}</span>
               </div>
             ))}
           </div>

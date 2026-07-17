@@ -92,14 +92,14 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
   }, []);
 
   const avatarColors = [
-    'from-answer-red to-pink-600',
-    'from-answer-blue to-cyan-600',
-    'from-answer-yellow to-orange-500',
-    'from-answer-green to-emerald-600',
-    'from-brand-500 to-purple-600',
-    'from-pink-500 to-rose-600',
-    'from-cyan-500 to-blue-600',
-    'from-orange-500 to-amber-600',
+    'bg-answer-red',
+    'bg-answer-blue',
+    'bg-answer-yellow',
+    'bg-answer-green',
+    'bg-brand-600',
+    'bg-accent-500',
+    'bg-[#2f6690]',
+    'bg-[#bc4749]',
   ];
 
   if (!joined) {
@@ -107,12 +107,12 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-sm text-center">
           <div className="mb-8 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-600/20 border border-brand-500/30 text-brand-300 text-sm mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-600/20 border border-brand-500/30 text-brand-600 text-sm mb-6">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Game PIN: {pin}
             </div>
             <h1 className="text-3xl font-bold mb-2">You&apos;re in!</h1>
-            <p className="text-white/40">Choose a nickname to join</p>
+            <p className="text-ink/40">Choose a nickname to join</p>
           </div>
 
           <div className="animate-slide-up space-y-4">
@@ -129,7 +129,7 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
             />
 
             {error && (
-              <p className="text-red-400 text-sm animate-fade-in" role="alert">{error}</p>
+              <p className="text-red-600 text-sm animate-fade-in" role="alert">{error}</p>
             )}
 
             <button
@@ -150,34 +150,34 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
       <div className="text-center max-w-lg w-full">
         {/* Status */}
         <div className="mb-8 animate-fade-in">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/15 border border-green-500/30 text-green-400 text-sm mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/15 border border-green-500/30 text-green-600 text-sm mb-4">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             Connected • PIN: {pin}
           </div>
           <h1 className="text-3xl font-bold mb-2">Waiting for host...</h1>
-          <p className="text-white/40">
-            You joined as <span className="text-brand-300 font-medium">{nickname}</span>
+          <p className="text-ink/40">
+            You joined as <span className="text-brand-600 font-medium">{nickname}</span>
           </p>
         </div>
 
         {/* Players grid */}
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-white/50">Players in lobby</h2>
-            <span className="text-sm font-bold text-brand-400">{players.length}</span>
+            <h2 className="text-sm font-medium text-ink/50">Players in lobby</h2>
+            <span className="text-sm font-bold text-brand-600">{players.length}</span>
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[40vh] overflow-y-auto">
             {players.map((player, i) => (
               <div
                 key={player.id}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/[0.03] animate-bounce-in"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-ink/[0.03] animate-bounce-in"
                 style={{ animationDelay: `${i * 50}ms` }}
               >
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center font-bold text-sm`}>
+                <div className={`w-10 h-10 rounded-full ${avatarColors[i % avatarColors.length]} text-white flex items-center justify-center font-bold text-sm`}>
                   {player.nickname.charAt(0).toUpperCase()}
                 </div>
-                <span className={`text-xs truncate w-full text-center ${player.id === playerId ? 'text-brand-300 font-bold' : 'text-white/70'}`}>
+                <span className={`text-xs truncate w-full text-center ${player.id === playerId ? 'text-brand-600 font-bold' : 'text-ink/70'}`}>
                   {player.nickname}
                 </span>
               </div>

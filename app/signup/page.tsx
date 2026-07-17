@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { Logo } from '@/components/Logo';
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -36,19 +37,17 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8 animate-fade-in">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center font-bold text-xl">
-              Q
-            </div>
-          </Link>
-          <h1 className="text-3xl font-bold text-gradient">Create your account</h1>
-          <p className="text-white/40 mt-2">Join the fun on Quizify</p>
+          <div className="flex justify-center mb-6">
+            <Logo size={54} withWordmark={false} />
+          </div>
+          <h1 className="text-3xl font-display font-semibold">Create your account</h1>
+          <p className="text-ink/45 mt-2">Build quizzes people actually remember</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="glass-card p-8 space-y-5 animate-slide-up">
           {error && (
-            <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm" role="alert">
+            <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 text-sm" role="alert">
               {error}
             </div>
           )}
@@ -62,8 +61,8 @@ export default function SignupPage() {
                 onClick={() => setRole('PARTICIPANT')}
                 className={`p-4 rounded-xl border text-center transition-all duration-200 ${
                   role === 'PARTICIPANT'
-                    ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
-                    : 'bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-white/[0.06]'
+                    ? 'bg-brand-600/20 border-brand-500/50 text-brand-600'
+                    : 'bg-ink/[0.04] border-ink/[0.08] text-ink/50 hover:bg-ink/[0.06]'
                 }`}
               >
                 <span className="text-2xl block mb-1">🎮</span>
@@ -74,8 +73,8 @@ export default function SignupPage() {
                 onClick={() => setRole('HOST')}
                 className={`p-4 rounded-xl border text-center transition-all duration-200 ${
                   role === 'HOST'
-                    ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
-                    : 'bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-white/[0.06]'
+                    ? 'bg-brand-600/20 border-brand-500/50 text-brand-600'
+                    : 'bg-ink/[0.04] border-ink/[0.08] text-ink/50 hover:bg-ink/[0.06]'
                 }`}
               >
                 <span className="text-2xl block mb-1">🎯</span>
@@ -154,9 +153,9 @@ export default function SignupPage() {
             )}
           </button>
 
-          <p className="text-center text-sm text-white/40">
+          <p className="text-center text-sm text-ink/40">
             Already have an account?{' '}
-            <Link href="/login" className="text-brand-400 hover:text-brand-300 underline underline-offset-4">
+            <Link href="/login" className="text-brand-600 hover:text-brand-600 underline underline-offset-4">
               Sign in
             </Link>
           </p>

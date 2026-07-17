@@ -61,7 +61,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
   if (authLoading || loading || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3 text-white/50">
+        <div className="flex items-center gap-3 text-ink/50">
           <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -78,10 +78,10 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-white/[0.06]">
+      <header className="border-b border-ink/[0.06]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <Link href="/dashboard" className="text-sm text-white/40 hover:text-white/60 transition-colors">
+            <Link href="/dashboard" className="text-sm text-ink/40 hover:text-ink/60 transition-colors">
               ← Dashboard
             </Link>
             <h1 className="text-xl font-bold mt-1">{session.quiz.title} — Results</h1>
@@ -97,9 +97,9 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
         {winner && (
           <div className="glass-card p-8 text-center mb-8 animate-bounce-in">
             <div className="text-5xl mb-3">🏆</div>
-            <p className="text-sm text-white/40 mb-1">Winner</p>
+            <p className="text-sm text-ink/40 mb-1">Winner</p>
             <h2 className="text-3xl font-extrabold text-gradient mb-2">{winner.nickname}</h2>
-            <p className="text-2xl font-bold text-brand-300">{winner.totalScore} points</p>
+            <p className="text-2xl font-bold text-brand-600">{winner.totalScore} points</p>
           </div>
         )}
 
@@ -112,7 +112,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
                 🥈
               </div>
               <p className="font-bold truncate max-w-[100px]">{players[1].nickname}</p>
-              <p className="text-sm text-white/40">{players[1].totalScore} pts</p>
+              <p className="text-sm text-ink/40">{players[1].totalScore} pts</p>
             </div>
             {/* 1st place */}
             <div className="text-center animate-slide-up">
@@ -120,7 +120,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
                 🥇
               </div>
               <p className="font-bold text-lg truncate max-w-[120px]">{players[0].nickname}</p>
-              <p className="text-sm text-brand-300">{players[0].totalScore} pts</p>
+              <p className="text-sm text-brand-600">{players[0].totalScore} pts</p>
             </div>
             {/* 3rd place */}
             <div className="text-center animate-slide-up animate-delay-200">
@@ -128,21 +128,21 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
                 🥉
               </div>
               <p className="font-bold truncate max-w-[100px]">{players[2].nickname}</p>
-              <p className="text-sm text-white/40">{players[2].totalScore} pts</p>
+              <p className="text-sm text-ink/40">{players[2].totalScore} pts</p>
             </div>
           </div>
         )}
 
         {/* Full leaderboard table */}
         <div className="glass-card overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06]">
+          <div className="px-6 py-4 border-b border-ink/[0.06]">
             <h3 className="font-bold">Full Leaderboard</h3>
-            <p className="text-sm text-white/40">{players.length} participants</p>
+            <p className="text-sm text-ink/40">{players.length} participants</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-white/40 border-b border-white/[0.06]">
+                <tr className="text-left text-ink/40 border-b border-ink/[0.06]">
                   <th className="px-6 py-3 font-medium">Rank</th>
                   <th className="px-6 py-3 font-medium">Player</th>
                   <th className="px-6 py-3 font-medium text-right">Score</th>
@@ -167,26 +167,26 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
                   return (
                     <tr
                       key={player.id}
-                      className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
+                      className="border-b border-ink/[0.03] hover:bg-ink/[0.02] transition-colors"
                     >
                       <td className="px-6 py-3">
                         <span className={`w-7 h-7 inline-flex items-center justify-center rounded-full text-xs font-bold ${
                           i === 0 ? 'bg-yellow-500 text-black' :
                           i === 1 ? 'bg-slate-400 text-black' :
                           i === 2 ? 'bg-orange-700 text-white' :
-                          'bg-white/10 text-white/50'
+                          'bg-ink/10 text-ink/50'
                         }`}>
                           {i + 1}
                         </span>
                       </td>
                       <td className="px-6 py-3 font-medium">{player.nickname}</td>
-                      <td className="px-6 py-3 text-right font-bold text-brand-300">
+                      <td className="px-6 py-3 text-right font-bold text-brand-600">
                         {player.totalScore}
                       </td>
-                      <td className="px-6 py-3 text-right text-white/60">
+                      <td className="px-6 py-3 text-right text-ink/60">
                         {correct}/{player.responses.length}
                       </td>
-                      <td className="px-6 py-3 text-right text-white/60">
+                      <td className="px-6 py-3 text-right text-ink/60">
                         {avgMs > 0 ? `${(avgMs / 1000).toFixed(1)}s` : '—'}
                       </td>
                     </tr>

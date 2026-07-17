@@ -140,10 +140,10 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
   if (phase === 'LOBBY') {
     return (
       <div className="min-h-screen flex flex-col">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-ink/[0.06]">
           <div>
             <h1 className="text-lg font-bold">{quizTitle || 'Quiz'}</h1>
-            <p className="text-xs text-white/40">{questions.length} questions</p>
+            <p className="text-xs text-ink/40">{questions.length} questions</p>
           </div>
           <button onClick={startGame} disabled={players.length === 0} className="btn-primary">
             ▶ Start Game ({players.length} player{players.length !== 1 ? 's' : ''})
@@ -152,12 +152,12 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
 
         <main className="flex-1 flex flex-col items-center justify-center px-4">
           <div className="text-center mb-10 animate-fade-in">
-            <p className="text-sm text-white/40 mb-2 uppercase tracking-wider">Game PIN</p>
-            <div className="text-7xl sm:text-8xl font-extrabold tracking-[0.15em] text-gradient animate-glow mb-4">
+            <p className="text-xs text-ink/45 mb-3 uppercase tracking-[0.35em] font-mono">Game PIN</p>
+            <div className="text-7xl sm:text-8xl font-mono font-bold tracking-[0.15em] text-brand-600 animate-breathe mb-4 [text-shadow:0_0_40px_rgba(61,139,255,0.4)]">
               {pin}
             </div>
-            <p className="text-white/40">
-              Join at <span className="text-brand-300 font-medium">quizify.dev</span> or scan QR
+            <p className="text-ink/45">
+              Join at <span className="text-brand-600 font-medium">quizify.dev</span> or scan QR
             </p>
           </div>
 
@@ -165,14 +165,14 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
           <div className="glass-card p-6 w-full max-w-2xl animate-slide-up">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold">Players</h2>
-              <span className="text-brand-400 font-bold">{players.length}</span>
+              <span className="text-brand-600 font-bold">{players.length}</span>
             </div>
             {players.length === 0 ? (
-              <p className="text-center text-white/30 py-8">Waiting for players to join...</p>
+              <p className="text-center text-ink/30 py-8">Waiting for players to join...</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {players.map((p, i) => (
-                  <div key={p.id} className="px-4 py-2 rounded-full bg-white/[0.06] text-sm font-medium animate-bounce-in" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div key={p.id} className="px-4 py-2 rounded-full bg-ink/[0.06] text-sm font-medium animate-bounce-in" style={{ animationDelay: `${i * 50}ms` }}>
                     {p.nickname}
                   </div>
                 ))}
@@ -191,14 +191,14 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
       <div className="min-h-screen flex flex-col p-6">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
-          <span className="text-sm text-white/40">
+          <span className="text-sm text-ink/40">
             Question {currentIndex + 1} of {questions.length}
           </span>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-white/40">
+            <span className="text-sm text-ink/40">
               {answerCount.answered}/{players.length} answered
             </span>
-            <span className={`text-3xl font-bold ${timeLeft <= 5 ? 'text-red-400 animate-pulse' : 'text-brand-300'}`}>
+            <span className={`text-3xl font-bold ${timeLeft <= 5 ? 'text-red-600 animate-pulse' : 'text-brand-600'}`}>
               {Math.ceil(timeLeft)}s
             </span>
           </div>
@@ -219,7 +219,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
           {currentQ.answers.map((answer, i) => (
             <div
               key={i}
-              className={`${BG_COLORS[i]} rounded-2xl p-8 flex items-center gap-4 animate-slide-up`}
+              className={`${BG_COLORS[i]} text-white rounded-2xl p-8 flex items-center gap-4 animate-slide-up`}
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <span className="text-4xl opacity-60">{SHAPES[i]}</span>
@@ -249,7 +249,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col p-6">
         <div className="text-center mb-6">
-          <p className="text-sm text-white/40 mb-2">Question {currentIndex + 1} of {questions.length}</p>
+          <p className="text-sm text-ink/40 mb-2">Question {currentIndex + 1} of {questions.length}</p>
           <h2 className="text-2xl sm:text-3xl font-bold">{currentQ.prompt}</h2>
         </div>
 
@@ -263,22 +263,22 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
             return (
               <div key={i} className="animate-slide-in-left" style={{ animationDelay: `${i * 100}ms` }}>
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl ${BG_COLORS[i]} flex items-center justify-center text-xl ${
+                  <div className={`w-12 h-12 rounded-xl ${BG_COLORS[i]} text-white flex items-center justify-center text-xl ${
                     isCorrect ? 'ring-2 ring-green-400' : 'opacity-50'
                   }`}>
                     {SHAPES[i]}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`font-medium ${isCorrect ? 'text-green-400' : 'text-white/60'}`}>
+                      <span className={`font-medium ${isCorrect ? 'text-green-600' : 'text-ink/60'}`}>
                         {answer.text} {isCorrect && '✓'}
                       </span>
-                      <span className="text-sm text-white/40">{count} ({pct}%)</span>
+                      <span className="text-sm text-ink/40">{count} ({pct}%)</span>
                     </div>
-                    <div className="h-8 bg-white/[0.05] rounded-lg overflow-hidden">
+                    <div className="h-8 bg-ink/[0.05] rounded-lg overflow-hidden">
                       <div
                         className={`h-full rounded-lg transition-all duration-1000 ease-out ${
-                          isCorrect ? 'bg-green-500/60' : 'bg-white/10'
+                          isCorrect ? 'bg-green-500/60' : 'bg-ink/10'
                         }`}
                         style={{ width: `${pct}%` }}
                       />
@@ -328,12 +328,12 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
                   i === 0 ? 'bg-yellow-500 text-black text-lg' :
                   i === 1 ? 'bg-slate-400 text-black' :
                   i === 2 ? 'bg-orange-700 text-white' :
-                  'bg-white/10 text-white/50'
+                  'bg-ink/10 text-ink/50'
                 }`}>
                   {i + 1}
                 </span>
                 <span className="flex-1 text-left text-lg font-medium">{player.nickname}</span>
-                <span className="text-xl font-bold text-brand-300">{player.totalScore}</span>
+                <span className="text-xl font-bold text-brand-600">{player.totalScore}</span>
               </div>
             ))}
           </div>
@@ -362,7 +362,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
         <div className="text-center animate-bounce-in">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-4xl font-extrabold text-gradient mb-4">Game Over!</h1>
-          <p className="text-white/40 mb-8">Great session! Check out the full results.</p>
+          <p className="text-ink/40 mb-8">Great session! Check out the full results.</p>
           <div className="flex gap-4 justify-center">
             <button
               onClick={() => router.push(`/host/${sessionId}/results`)}
@@ -382,7 +382,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
   // Loading
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="flex items-center gap-3 text-white/50">
+      <div className="flex items-center gap-3 text-ink/50">
         <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />

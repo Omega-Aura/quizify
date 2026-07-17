@@ -51,7 +51,6 @@ Or point `DATABASE_URL` in `.env` to your existing PostgreSQL instance.
 
 ```bash
 npx prisma migrate dev --name init
-npm run db:seed
 ```
 
 ### 5. Start development
@@ -64,22 +63,23 @@ This starts:
 - **Next.js** on [http://localhost:3000](http://localhost:3000)
 - **API + Socket.io** on [http://localhost:3001](http://localhost:3001)
 
-## Demo Credentials
+## Creating a Host Account
 
-| Role        | Email              | Password    |
-|-------------|--------------------|-------------|
-| Host        | host@quizify.dev   | password123 |
-| Participant | player@quizify.dev | password123 |
+Anyone can join a quiz as a participant. To create a **host** account (which can
+build quizzes and run live sessions), set `HOST_SIGNUP_KEY` to a secret value and
+enter that key on the sign-up page. If `HOST_SIGNUP_KEY` is not set, host signup is
+disabled.
 
 ## Environment Variables
 
-| Variable               | Description                  | Default                                        |
-|------------------------|------------------------------|------------------------------------------------|
-| `DATABASE_URL`         | PostgreSQL connection string | `postgresql://quizify:quizify@localhost:5432/quizify` |
-| `JWT_SECRET`           | JWT signing secret           | `dev-secret-change-me`                         |
-| `PORT`                 | API server port              | `3001`                                         |
-| `NEXT_PUBLIC_API_URL`  | API URL for frontend         | `http://localhost:3001`                        |
-| `NEXT_PUBLIC_SOCKET_URL` | Socket.io URL for frontend | `http://localhost:3001`                        |
+| Variable               | Description                                    | Default                                        |
+|------------------------|------------------------------------------------|------------------------------------------------|
+| `DATABASE_URL`         | PostgreSQL connection string                   | `postgresql://quizify:quizify@localhost:5432/quizify` |
+| `JWT_SECRET`           | JWT signing secret                             | `dev-secret-change-me`                         |
+| `HOST_SIGNUP_KEY`      | Secret required to sign up as a host           | _(unset — host signup disabled)_               |
+| `PORT`                 | API server port                                | `3001`                                         |
+| `NEXT_PUBLIC_API_URL`  | API URL for frontend                           | `http://localhost:3001`                        |
+| `NEXT_PUBLIC_SOCKET_URL` | Socket.io URL for frontend                   | `http://localhost:3001`                        |
 
 ## Project Structure
 
@@ -103,7 +103,7 @@ Quizify/
 │   ├── middleware/         # Auth middleware
 │   └── lib/               # Utilities (Prisma, scoring)
 ├── lib/                    # Frontend utilities
-├── prisma/                 # Schema + seed
+├── prisma/                 # Schema + migrations
 └── docker-compose.yml      # PostgreSQL
 ```
 

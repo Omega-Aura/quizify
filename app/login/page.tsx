@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { Logo } from '@/components/Logo';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -33,19 +34,17 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8 animate-fade-in">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center font-bold text-xl">
-              Q
-            </div>
-          </Link>
-          <h1 className="text-3xl font-bold text-gradient">Welcome back</h1>
-          <p className="text-white/40 mt-2">Sign in to your Quizify account</p>
+          <div className="flex justify-center mb-6">
+            <Logo size={54} withWordmark={false} />
+          </div>
+          <h1 className="text-3xl font-display font-semibold">Welcome back</h1>
+          <p className="text-ink/45 mt-2">Sign in to keep the neurons firing</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="glass-card p-8 space-y-5 animate-slide-up">
           {error && (
-            <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm" role="alert">
+            <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 text-sm" role="alert">
               {error}
             </div>
           )}
@@ -91,31 +90,13 @@ export default function LoginPage() {
             )}
           </button>
 
-          <p className="text-center text-sm text-white/40">
+          <p className="text-center text-sm text-ink/40">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-brand-400 hover:text-brand-300 underline underline-offset-4">
+            <Link href="/signup" className="text-brand-600 hover:text-brand-600 underline underline-offset-4">
               Sign up
             </Link>
           </p>
         </form>
-
-        {/* Demo credentials */}
-        <div className="mt-6 glass-card p-4 animate-slide-up animate-delay-200">
-          <p className="text-xs text-white/30 text-center mb-2">Demo credentials</p>
-          <div className="flex gap-4 text-xs text-white/50">
-            <div className="flex-1 text-center">
-              <p className="font-medium text-brand-400">Host</p>
-              <p>host@quizify.dev</p>
-              <p>password123</p>
-            </div>
-            <div className="w-px bg-white/10" />
-            <div className="flex-1 text-center">
-              <p className="font-medium text-brand-400">Player</p>
-              <p>player@quizify.dev</p>
-              <p>password123</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

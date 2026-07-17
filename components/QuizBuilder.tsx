@@ -294,9 +294,9 @@ export function QuizBuilder({
   return (
     <div className="h-screen flex flex-col bg-surface">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-surface/80 backdrop-blur-sm z-10">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-ink/[0.06] bg-surface/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-white/40 hover:text-white/60 transition-colors">
+          <Link href="/dashboard" className="text-ink/40 hover:text-ink/60 transition-colors">
             ← Back
           </Link>
           <input
@@ -304,11 +304,11 @@ export function QuizBuilder({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Untitled Quiz"
-            className="bg-transparent text-xl font-bold outline-none placeholder:text-white/20 w-64"
+            className="bg-transparent text-xl font-bold outline-none placeholder:text-ink/20 w-64"
           />
         </div>
         <div className="flex items-center gap-3">
-          {error && <span className="text-red-400 text-sm">{error}</span>}
+          {error && <span className="text-red-600 text-sm">{error}</span>}
           <button onClick={() => setShowBulkImport(true)} className="btn-secondary text-sm !px-3 !py-2">
             📋 Bulk Import
           </button>
@@ -333,10 +333,10 @@ export function QuizBuilder({
                 className={`question-thumb ${i === activeIndex ? 'active' : ''} ${dragIndex === i ? 'dragging' : ''}`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-white/30">Q{i + 1}</span>
-                  <span className="text-[10px] text-white/20">{q.timeLimit}s</span>
+                  <span className="text-xs font-bold text-ink/30">Q{i + 1}</span>
+                  <span className="text-[10px] text-ink/20">{q.timeLimit}s</span>
                 </div>
-                <p className="text-xs text-white/60 line-clamp-2">
+                <p className="text-xs text-ink/60 line-clamp-2">
                   {q.prompt || 'Untitled question'}
                 </p>
                 <div className="flex gap-1 mt-2">
@@ -347,7 +347,7 @@ export function QuizBuilder({
               </div>
             ))}
           </div>
-          <div className="p-3 border-t border-white/[0.06]">
+          <div className="p-3 border-t border-ink/[0.06]">
             <button onClick={addQuestion} className="btn-secondary w-full text-sm !py-2.5">
               + Add Question
             </button>
@@ -377,12 +377,12 @@ export function QuizBuilder({
                 onChange={(e) => updateQuestion(activeIndex, { prompt: e.target.value })}
                 placeholder="Type your question here..."
                 rows={2}
-                className="w-full bg-transparent text-2xl font-bold outline-none resize-none placeholder:text-white/20"
+                className="w-full bg-transparent text-2xl font-bold outline-none resize-none placeholder:text-ink/20"
               />
             </div>
 
             {/* Media dropzone */}
-            <div className="glass-card p-8 text-center border-2 border-dashed border-white/[0.08] hover:border-brand-500/30 transition-colors cursor-pointer">
+            <div className="glass-card p-8 text-center border-2 border-dashed border-ink/[0.08] hover:border-brand-500/30 transition-colors cursor-pointer">
               {activeQ.mediaUrl ? (
                 <div className="relative">
                   <img src={activeQ.mediaUrl} alt="" className="max-h-48 mx-auto rounded-lg" />
@@ -394,7 +394,7 @@ export function QuizBuilder({
                   </button>
                 </div>
               ) : (
-                <div className="text-white/30">
+                <div className="text-ink/30">
                   <p className="text-3xl mb-2">🖼️</p>
                   <p className="text-sm">Click to upload an image or drag and drop</p>
                 </div>
@@ -407,7 +407,7 @@ export function QuizBuilder({
                 <div
                   key={ai}
                   className={`relative rounded-xl p-4 ${BG_COLORS[ai]} ${
-                    answer.isCorrect ? 'ring-2 ring-white ring-offset-2 ring-offset-surface' : ''
+                    answer.isCorrect ? 'ring-2 ring-ink/60 ring-offset-2 ring-offset-surface' : ''
                   } transition-all duration-200`}
                 >
                   {/* Shape icon */}
@@ -419,7 +419,7 @@ export function QuizBuilder({
                       className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
                         answer.isCorrect
                           ? 'bg-white border-white text-green-600'
-                          : 'border-white/40 text-transparent hover:border-white/60'
+                          : 'border-ink/40 text-transparent hover:border-ink/60'
                       }`}
                       title={answer.isCorrect ? 'Correct answer' : 'Mark as correct'}
                       aria-label={`Mark answer ${ai + 1} as ${answer.isCorrect ? 'incorrect' : 'correct'}`}
@@ -433,7 +433,7 @@ export function QuizBuilder({
                     value={answer.text}
                     onChange={(e) => updateAnswer(activeIndex, ai, { text: e.target.value })}
                     placeholder={`Answer ${ai + 1}`}
-                    className="w-full bg-transparent text-white font-semibold text-lg outline-none placeholder:text-white/40"
+                    className="w-full bg-transparent text-white font-semibold text-lg outline-none placeholder:text-ink/40"
                     disabled={activeQ.type === 'TRUE_FALSE'}
                   />
                 </div>
@@ -443,9 +443,9 @@ export function QuizBuilder({
         </div>
 
         {/* ─── Right sidebar: question properties ─────────────────── */}
-        <div className="w-72 overflow-y-auto border-l border-white/[0.08] bg-surface/50 p-5 space-y-6">
+        <div className="w-72 overflow-y-auto border-l border-ink/[0.08] bg-surface/50 p-5 space-y-6">
           <div>
-            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-ink/50 mb-4 uppercase tracking-wider">
               Question Settings
             </h3>
           </div>
@@ -474,7 +474,7 @@ export function QuizBuilder({
                   className={`py-2 rounded-lg text-sm font-medium transition-all ${
                     activeQ.timeLimit === t
                       ? 'bg-brand-600 text-white'
-                      : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
+                      : 'bg-ink/[0.05] text-ink/50 hover:bg-ink/[0.08]'
                   }`}
                 >
                   {t}s
@@ -509,7 +509,7 @@ export function QuizBuilder({
                   className={`py-2 rounded-lg text-sm font-medium transition-all ${
                     activeQ.singleSelect
                       ? 'bg-brand-600 text-white'
-                      : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
+                      : 'bg-ink/[0.05] text-ink/50 hover:bg-ink/[0.08]'
                   }`}
                 >
                   Single
@@ -519,7 +519,7 @@ export function QuizBuilder({
                   className={`py-2 rounded-lg text-sm font-medium transition-all ${
                     !activeQ.singleSelect
                       ? 'bg-brand-600 text-white'
-                      : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
+                      : 'bg-ink/[0.05] text-ink/50 hover:bg-ink/[0.08]'
                   }`}
                 >
                   Multi
@@ -529,7 +529,7 @@ export function QuizBuilder({
           )}
 
           {/* Divider */}
-          <hr className="border-white/[0.06]" />
+          <hr className="border-ink/[0.06]" />
 
           {/* Slide actions */}
           <div>
@@ -558,10 +558,10 @@ export function QuizBuilder({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="glass-card p-8 w-full max-w-xl mx-4 animate-scale-in">
             <h2 className="text-xl font-bold mb-2">Bulk Import Questions</h2>
-            <p className="text-sm text-white/40 mb-4">
+            <p className="text-sm text-ink/40 mb-4">
               Paste CSV or plain text, one question per line:
               <br />
-              <code className="text-brand-300 text-xs">question, ans1, ans2, ans3, ans4, correctIndex</code>
+              <code className="text-brand-600 text-xs">question, ans1, ans2, ans3, ans4, correctIndex</code>
             </p>
             <textarea
               value={bulkText}

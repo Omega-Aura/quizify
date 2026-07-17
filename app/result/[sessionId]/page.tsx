@@ -48,7 +48,7 @@ export default function ResultPage({ params }: { params: { sessionId: string } }
   if (loading || !player) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3 text-white/50">
+        <div className="flex items-center gap-3 text-ink/50">
           <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -71,30 +71,30 @@ export default function ResultPage({ params }: { params: { sessionId: string } }
           <div className="text-5xl mb-3">
             {player.rank === 1 ? '🥇' : player.rank === 2 ? '🥈' : player.rank === 3 ? '🥉' : '🎮'}
           </div>
-          <p className="text-sm text-white/40 mb-1">{player.quizTitle}</p>
+          <p className="text-sm text-ink/40 mb-1">{player.quizTitle}</p>
           <h1 className="text-3xl font-extrabold text-gradient mb-2">{player.nickname}</h1>
           <div className="flex items-center justify-center gap-6 text-lg">
             <div>
-              <span className="text-white/40 text-sm block">Rank</span>
-              <span className="font-bold text-brand-300">#{player.rank}</span>
-              <span className="text-white/30 text-sm">/{player.totalPlayers}</span>
+              <span className="text-ink/40 text-sm block">Rank</span>
+              <span className="font-bold text-brand-600">#{player.rank}</span>
+              <span className="text-ink/30 text-sm">/{player.totalPlayers}</span>
             </div>
-            <div className="w-px h-10 bg-white/10" />
+            <div className="w-px h-10 bg-ink/10" />
             <div>
-              <span className="text-white/40 text-sm block">Score</span>
-              <span className="font-bold text-brand-300">{player.totalScore}</span>
+              <span className="text-ink/40 text-sm block">Score</span>
+              <span className="font-bold text-brand-600">{player.totalScore}</span>
             </div>
-            <div className="w-px h-10 bg-white/10" />
+            <div className="w-px h-10 bg-ink/10" />
             <div>
-              <span className="text-white/40 text-sm block">Correct</span>
-              <span className="font-bold text-green-400">{correct}/{player.responses.length}</span>
+              <span className="text-ink/40 text-sm block">Correct</span>
+              <span className="font-bold text-green-600">{correct}/{player.responses.length}</span>
             </div>
           </div>
         </div>
 
         {/* Per-question breakdown */}
         <div className="space-y-3">
-          <h2 className="text-sm font-bold text-white/40 uppercase tracking-wider">
+          <h2 className="text-sm font-bold text-ink/40 uppercase tracking-wider">
             Question Breakdown
           </h2>
 
@@ -121,22 +121,22 @@ export default function ResultPage({ params }: { params: { sessionId: string } }
                   </p>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                     isCorrect
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-red-500/20 text-red-400'
+                      ? 'bg-green-500/20 text-green-600'
+                      : 'bg-red-500/20 text-red-600'
                   }`}>
                     {isCorrect ? `+${resp.pointsAwarded}` : 'Wrong'}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-white/40">
+                <div className="flex items-center gap-4 text-xs text-ink/40">
                   <span>
                     Your answer:{' '}
-                    <span className={isCorrect ? 'text-green-400' : 'text-red-400'}>
+                    <span className={isCorrect ? 'text-green-600' : 'text-red-600'}>
                       {chosenAnswer?.text || '—'}
                     </span>
                   </span>
                   {!isCorrect && correctAnswer && (
                     <span>
-                      Correct: <span className="text-green-400">{correctAnswer.text}</span>
+                      Correct: <span className="text-green-600">{correctAnswer.text}</span>
                     </span>
                   )}
                   <span className="ml-auto">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { Logo } from '@/components/Logo';
 
 interface Quiz {
   id: string;
@@ -85,7 +86,7 @@ export default function DashboardPage() {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3 text-white/50">
+        <div className="flex items-center gap-3 text-ink/50">
           <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -99,19 +100,14 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-white/[0.06]">
+      <header className="border-b border-ink/[0.06]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center font-bold">
-                Q
-              </div>
-              <span className="text-lg font-bold text-gradient">Quizify</span>
-            </Link>
+            <Logo size={34} />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-white/40">{user?.name}</span>
-            <button onClick={logout} className="text-sm text-white/40 hover:text-white/60 transition-colors">
+            <span className="text-sm text-ink/40">{user?.name}</span>
+            <button onClick={logout} className="text-sm text-ink/40 hover:text-ink/60 transition-colors">
               Sign out
             </button>
           </div>
@@ -123,8 +119,8 @@ export default function DashboardPage() {
         {/* Title row */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">My Quizzes</h1>
-            <p className="text-white/40 mt-1">{quizzes.length} quiz{quizzes.length !== 1 ? 'zes' : ''}</p>
+            <h1 className="text-3xl font-display font-semibold">My Quizzes</h1>
+            <p className="text-ink/45 mt-1">{quizzes.length} quiz{quizzes.length !== 1 ? 'zes' : ''}</p>
           </div>
           <Link href="/quiz/new" className="btn-primary">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -139,7 +135,7 @@ export default function DashboardPage() {
           <div className="glass-card p-16 text-center animate-fade-in">
             <div className="text-5xl mb-4">🎯</div>
             <h2 className="text-xl font-bold mb-2">No quizzes yet</h2>
-            <p className="text-white/40 mb-6">Create your first quiz and start hosting live sessions</p>
+            <p className="text-ink/40 mb-6">Create your first quiz and start hosting live sessions</p>
             <Link href="/quiz/new" className="btn-primary">
               Create your first quiz
             </Link>
@@ -156,9 +152,9 @@ export default function DashboardPage() {
                 <div className="flex-1 mb-4">
                   <h3 className="text-lg font-bold mb-1 line-clamp-2">{quiz.title}</h3>
                   {quiz.description && (
-                    <p className="text-sm text-white/40 line-clamp-2">{quiz.description}</p>
+                    <p className="text-sm text-ink/40 line-clamp-2">{quiz.description}</p>
                   )}
-                  <div className="flex items-center gap-3 mt-3 text-xs text-white/30">
+                  <div className="flex items-center gap-3 mt-3 text-xs text-ink/30">
                     <span>{quiz._count.questions} question{quiz._count.questions !== 1 ? 's' : ''}</span>
                     <span>•</span>
                     <span>{quiz._count.sessions} session{quiz._count.sessions !== 1 ? 's' : ''}</span>
@@ -166,7 +162,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-4 border-t border-white/[0.06]">
+                <div className="flex items-center gap-2 pt-4 border-t border-ink/[0.06]">
                   <button
                     onClick={() => handleHostLive(quiz.id)}
                     disabled={actionLoading === quiz.id}

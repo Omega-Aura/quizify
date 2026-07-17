@@ -74,3 +74,9 @@ Thumbs.db
 coverage/
 .nyc_output/
 .jest/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Stray Windows redirect artifact (e.g. `cmd > nul` run under a POSIX shell)
+nul

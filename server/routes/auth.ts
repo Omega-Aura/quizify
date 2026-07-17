@@ -16,9 +16,9 @@ const signupSchema = z.object({
   hostKey: z.string().optional(),
 });
 
-// Secret required to sign up as a HOST. Set HOST_SIGNUP_KEY in production;
-// falls back to a default for local dev.
-const HOST_SIGNUP_KEY = process.env.HOST_SIGNUP_KEY || 'igem@demo';
+// Secret required to sign up as a HOST. Must be set via the HOST_SIGNUP_KEY
+// environment variable — if it is unset, host signup is disabled (fail closed).
+const HOST_SIGNUP_KEY = process.env.HOST_SIGNUP_KEY;
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -37,8 +37,13 @@ authRoutes.post('/signup', async (c) => {
 
   const { email, password, name, role, hostKey } = result.data;
 
-  if (role === 'HOST' && hostKey !== HOST_SIGNUP_KEY) {
-    return c.json({ message: 'Invalid host key' }, 403);
+  if (role === 'HOST') {
+    if (!HOST_SIGNUP_KEY) {
+      return c.json({ message: 'Host signup is not enabled' }, 403);
+    }
+    if (hostKey !== HOST_SIGNUP_KEY) {
+      return c.json({ message: 'Invalid host key' }, 403);
+    }
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
