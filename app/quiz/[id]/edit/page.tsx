@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { QuizBuilder } from '../../new/page';
+import { QuizBuilder } from '@/components/QuizBuilder';
 
 interface QuizData {
   id: string;
