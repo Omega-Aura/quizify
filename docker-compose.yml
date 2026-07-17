@@ -6,9 +6,9 @@ services:
     container_name: quizify-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: quizify
-      POSTGRES_USER: quizify
-      POSTGRES_PASSWORD: quizify
+      POSTGRES_DB: ${POSTGRES_DB:-quizify}
+      POSTGRES_USER: ${POSTGRES_USER:-quizify}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your .env file (copy .env.example first)}
     ports:
       - '5433:5432'
     volumes:

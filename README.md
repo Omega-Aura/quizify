@@ -74,7 +74,10 @@ disabled.
 
 | Variable               | Description                                    | Default                                        |
 |------------------------|------------------------------------------------|------------------------------------------------|
-| `DATABASE_URL`         | PostgreSQL connection string                   | `postgresql://quizify:quizify@localhost:5432/quizify` |
+| `POSTGRES_DB`          | Docker Compose Postgres database name          | `quizify`                                      |
+| `POSTGRES_USER`        | Docker Compose Postgres user                   | `quizify`                                      |
+| `POSTGRES_PASSWORD`    | Docker Compose Postgres password — set your own | _(required, no default — see `.env.example`)_ |
+| `DATABASE_URL`         | PostgreSQL connection string (must match the `POSTGRES_*` values and port `5433`) | `postgresql://quizify:<your-password>@localhost:5433/quizify` |
 | `JWT_SECRET`           | JWT signing secret                             | `dev-secret-change-me`                         |
 | `HOST_SIGNUP_KEY`      | Secret required to sign up as a host           | _(unset — host signup disabled)_               |
 | `PORT`                 | API server port                                | `3001`                                         |
