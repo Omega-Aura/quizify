@@ -63,6 +63,11 @@ This starts:
 - **Next.js** on [http://localhost:3000](http://localhost:3000)
 - **API + Socket.io** on [http://localhost:3001](http://localhost:3001)
 
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for deploying the frontend on Vercel, the
+backend on Render, and the database on Neon.
+
 ## Creating a Host Account
 
 Anyone can join a quiz as a participant. To create a **host** account (which can

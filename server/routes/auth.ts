@@ -8,9 +8,16 @@ export const authRoutes = new Hono();
 
 // ─── Validation ──────────────────────────────────────────────────────
 
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+
 const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z
+    .string()
+    .regex(
+      PASSWORD_REGEX,
+      'Password must be 8+ characters and include upper & lower case letters, a number, and a symbol'
+    ),
   name: z.string().min(1, 'Name is required').max(50),
   role: z.enum(['HOST', 'PARTICIPANT']).default('PARTICIPANT'),
   hostKey: z.string().optional(),

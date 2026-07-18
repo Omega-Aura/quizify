@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { Select } from '@/components/Select';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -27,6 +28,7 @@ const SHAPES = ['▲', '◆', '●', '■'] as const;
 const COLORS = ['answer-red', 'answer-blue', 'answer-yellow', 'answer-green'] as const;
 const BG_COLORS = ['bg-answer-red', 'bg-answer-blue', 'bg-answer-yellow', 'bg-answer-green'] as const;
 const TIME_LIMITS = [5, 10, 20, 30, 60, 90];
+const MAX_MEDIA_BYTES = 3 * 1024 * 1024; // 3MB — stored inline as a data URL, no file storage backend
 
 function createBlankQuestion(): QuestionState {
   return {
@@ -71,6 +73,9 @@ export function QuizBuilder({
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [mediaError, setMediaError] = useState('');
+  const [mediaDragOver, setMediaDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeQ = questions[activeIndex] || questions[0];
 
@@ -101,6 +106,30 @@ export function QuizBuilder({
       );
     },
     []
+  );
+
+  const handleMediaFile = useCallback(
+    (file: File | undefined | null) => {
+      if (!file) return;
+      setMediaError('');
+
+      if (!file.type.startsWith('image/')) {
+        setMediaError('Please choose an image file');
+        return;
+      }
+      if (file.size > MAX_MEDIA_BYTES) {
+        setMediaError('Image must be under 3MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        updateQuestion(activeIndex, { mediaUrl: reader.result as string });
+      };
+      reader.onerror = () => setMediaError('Failed to read image');
+      reader.readAsDataURL(file);
+    },
+    [activeIndex, updateQuestion]
   );
 
   const addQuestion = () => {
@@ -296,7 +325,7 @@ export function QuizBuilder({
       {/* Top bar */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-ink/[0.06] bg-surface/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-ink/40 hover:text-ink/60 transition-colors">
+          <Link href="/dashboard" className="text-ink/55 hover:text-ink/75 transition-colors">
             ← Back
           </Link>
           <input
@@ -304,7 +333,7 @@ export function QuizBuilder({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Untitled Quiz"
-            className="bg-transparent text-xl font-bold outline-none placeholder:text-ink/20 w-64"
+            className="bg-transparent text-xl font-bold outline-none placeholder:text-ink/35 w-64"
           />
         </div>
         <div className="flex items-center gap-3">
@@ -333,10 +362,10 @@ export function QuizBuilder({
                 className={`question-thumb ${i === activeIndex ? 'active' : ''} ${dragIndex === i ? 'dragging' : ''}`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-ink/30">Q{i + 1}</span>
-                  <span className="text-[10px] text-ink/20">{q.timeLimit}s</span>
+                  <span className="text-xs font-bold text-ink/45">Q{i + 1}</span>
+                  <span className="text-[10px] text-ink/35">{q.timeLimit}s</span>
                 </div>
-                <p className="text-xs text-ink/60 line-clamp-2">
+                <p className="text-xs text-ink/75 line-clamp-2">
                   {q.prompt || 'Untitled question'}
                 </p>
                 <div className="flex gap-1 mt-2">
@@ -377,29 +406,58 @@ export function QuizBuilder({
                 onChange={(e) => updateQuestion(activeIndex, { prompt: e.target.value })}
                 placeholder="Type your question here..."
                 rows={2}
-                className="w-full bg-transparent text-2xl font-bold outline-none resize-none placeholder:text-ink/20"
+                className="w-full bg-transparent text-2xl font-bold outline-none resize-none placeholder:text-ink/45"
               />
             </div>
 
             {/* Media dropzone */}
-            <div className="glass-card p-8 text-center border-2 border-dashed border-ink/[0.08] hover:border-brand-500/30 transition-colors cursor-pointer">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                handleMediaFile(e.target.files?.[0]);
+                e.target.value = '';
+              }}
+            />
+            <div
+              onClick={() => !activeQ.mediaUrl && fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (!activeQ.mediaUrl) setMediaDragOver(true);
+              }}
+              onDragLeave={() => setMediaDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setMediaDragOver(false);
+                if (!activeQ.mediaUrl) handleMediaFile(e.dataTransfer.files?.[0]);
+              }}
+              className={`glass-card p-8 text-center border-2 border-dashed transition-colors ${
+                activeQ.mediaUrl ? '' : 'cursor-pointer'
+              } ${mediaDragOver ? 'border-brand-500/60 bg-brand-600/5' : 'border-ink/[0.14] hover:border-brand-500/30'}`}
+            >
               {activeQ.mediaUrl ? (
                 <div className="relative">
                   <img src={activeQ.mediaUrl} alt="" className="max-h-48 mx-auto rounded-lg" />
                   <button
-                    onClick={() => updateQuestion(activeIndex, { mediaUrl: null })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateQuestion(activeIndex, { mediaUrl: null });
+                    }}
                     className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
                   >
                     ✕
                   </button>
                 </div>
               ) : (
-                <div className="text-ink/30">
+                <div className="text-ink/45">
                   <p className="text-3xl mb-2">🖼️</p>
                   <p className="text-sm">Click to upload an image or drag and drop</p>
                 </div>
               )}
             </div>
+            {mediaError && <p className="text-sm text-red-600">{mediaError}</p>}
 
             {/* Answer grid */}
             <div className={`grid gap-4 ${activeQ.type === 'TRUE_FALSE' ? 'grid-cols-2' : 'grid-cols-2'}`}>
@@ -412,14 +470,14 @@ export function QuizBuilder({
                 >
                   {/* Shape icon */}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xl opacity-60">{SHAPES[ai]}</span>
+                    <span className="text-xl opacity-80">{SHAPES[ai]}</span>
                     <button
                       type="button"
                       onClick={() => toggleCorrect(activeIndex, ai)}
                       className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
                         answer.isCorrect
                           ? 'bg-white border-white text-green-600'
-                          : 'border-ink/40 text-transparent hover:border-ink/60'
+                          : 'border-ink/50 text-transparent hover:border-ink/70'
                       }`}
                       title={answer.isCorrect ? 'Correct answer' : 'Mark as correct'}
                       aria-label={`Mark answer ${ai + 1} as ${answer.isCorrect ? 'incorrect' : 'correct'}`}
@@ -433,7 +491,7 @@ export function QuizBuilder({
                     value={answer.text}
                     onChange={(e) => updateAnswer(activeIndex, ai, { text: e.target.value })}
                     placeholder={`Answer ${ai + 1}`}
-                    className="w-full bg-transparent text-white font-semibold text-lg outline-none placeholder:text-ink/40"
+                    className="w-full bg-transparent text-white font-semibold text-lg outline-none placeholder:text-ink/75"
                     disabled={activeQ.type === 'TRUE_FALSE'}
                   />
                 </div>
@@ -445,7 +503,7 @@ export function QuizBuilder({
         {/* ─── Right sidebar: question properties ─────────────────── */}
         <div className="w-72 overflow-y-auto border-l border-ink/[0.08] bg-surface/50 p-5 space-y-6">
           <div>
-            <h3 className="text-sm font-bold text-ink/50 mb-4 uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-ink/65 mb-4 uppercase tracking-wider">
               Question Settings
             </h3>
           </div>
@@ -453,14 +511,15 @@ export function QuizBuilder({
           {/* Question type */}
           <div>
             <label className="input-label">Question Type</label>
-            <select
+            <Select
               value={activeQ.type}
-              onChange={(e) => changeType(activeIndex, e.target.value as 'QUIZ' | 'TRUE_FALSE')}
-              className="input-field text-sm"
-            >
-              <option value="QUIZ">Quiz</option>
-              <option value="TRUE_FALSE">True / False</option>
-            </select>
+              onChange={(v) => changeType(activeIndex, v as 'QUIZ' | 'TRUE_FALSE')}
+              className="text-sm"
+              options={[
+                { value: 'QUIZ', label: 'Quiz' },
+                { value: 'TRUE_FALSE', label: 'True / False' },
+              ]}
+            />
           </div>
 
           {/* Time limit */}
@@ -474,7 +533,7 @@ export function QuizBuilder({
                   className={`py-2 rounded-lg text-sm font-medium transition-all ${
                     activeQ.timeLimit === t
                       ? 'bg-brand-600 text-white'
-                      : 'bg-ink/[0.05] text-ink/50 hover:bg-ink/[0.08]'
+                      : 'bg-ink/[0.08] text-ink/65 hover:bg-ink/[0.13]'
                   }`}
                 >
                   {t}s
@@ -486,17 +545,18 @@ export function QuizBuilder({
           {/* Points */}
           <div>
             <label className="input-label">Points</label>
-            <select
+            <Select
               value={activeQ.pointsMode}
-              onChange={(e) =>
-                updateQuestion(activeIndex, { pointsMode: e.target.value as 'STANDARD' | 'DOUBLE' | 'NONE' })
+              onChange={(v) =>
+                updateQuestion(activeIndex, { pointsMode: v as 'STANDARD' | 'DOUBLE' | 'NONE' })
               }
-              className="input-field text-sm"
-            >
-              <option value="STANDARD">Standard (1x)</option>
-              <option value="DOUBLE">Double (2x)</option>
-              <option value="NONE">No points</option>
-            </select>
+              className="text-sm"
+              options={[
+                { value: 'STANDARD', label: 'Standard (1x)' },
+                { value: 'DOUBLE', label: 'Double (2x)' },
+                { value: 'NONE', label: 'No points' },
+              ]}
+            />
           </div>
 
           {/* Answer mode */}
@@ -509,7 +569,7 @@ export function QuizBuilder({
                   className={`py-2 rounded-lg text-sm font-medium transition-all ${
                     activeQ.singleSelect
                       ? 'bg-brand-600 text-white'
-                      : 'bg-ink/[0.05] text-ink/50 hover:bg-ink/[0.08]'
+                      : 'bg-ink/[0.08] text-ink/65 hover:bg-ink/[0.13]'
                   }`}
                 >
                   Single
@@ -519,7 +579,7 @@ export function QuizBuilder({
                   className={`py-2 rounded-lg text-sm font-medium transition-all ${
                     !activeQ.singleSelect
                       ? 'bg-brand-600 text-white'
-                      : 'bg-ink/[0.05] text-ink/50 hover:bg-ink/[0.08]'
+                      : 'bg-ink/[0.08] text-ink/65 hover:bg-ink/[0.13]'
                   }`}
                 >
                   Multi

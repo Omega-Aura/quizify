@@ -71,7 +71,7 @@
 @layer components {
   /* Frosted-paper card on the light theme */
   .glass-card {
-    @apply relative rounded-2xl border border-ink/[0.08] bg-white/60 backdrop-blur-xl;
+    @apply relative rounded-2xl border border-ink/[0.12] bg-white/60 backdrop-blur-xl;
     box-shadow: 0 16px 40px -22px rgba(23, 26, 46, 0.25);
   }
 
@@ -99,11 +99,11 @@
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3
-           bg-ink/[0.04] backdrop-blur-md
-           border border-ink/[0.12]
-           text-ink/75 font-semibold rounded-xl
+           bg-ink/[0.06] backdrop-blur-md
+           border border-ink/[0.18]
+           text-ink/85 font-semibold rounded-xl
            transition-all duration-200
-           hover:bg-ink/[0.08] hover:border-ink/[0.2]
+           hover:bg-ink/[0.12] hover:border-ink/[0.28]
            active:scale-[0.98]
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
@@ -121,15 +121,15 @@
   /* Inputs */
   .input-field {
     @apply w-full px-4 py-3
-           bg-white/70 backdrop-blur-md border border-ink/[0.12] rounded-xl
-           text-ink placeholder:text-ink/30
+           bg-white/70 backdrop-blur-md border border-ink/[0.18] rounded-xl
+           text-ink placeholder:text-ink/40
            transition-all duration-200
            focus:bg-white focus:border-answer-blue/60 focus:ring-2 focus:ring-answer-blue/20
            outline-none;
   }
 
   .input-label {
-    @apply block text-xs font-medium uppercase tracking-wider text-ink/50 mb-2;
+    @apply block text-xs font-medium uppercase tracking-wider text-ink/65 mb-2;
   }
 
   /* Answer cards — solid game colors, white text */
@@ -209,15 +209,15 @@
 /* ─── Builder ───────────────────────────────────────────────────────── */
 
 .builder-sidebar {
-  @apply w-64 overflow-y-auto border-r border-ink/[0.08];
+  @apply w-64 overflow-y-auto border-r border-ink/[0.12];
   scrollbar-width: thin;
 }
 
 .question-thumb {
   @apply relative p-3 mx-3 my-2 rounded-lg cursor-pointer
-         bg-ink/[0.03] border border-transparent
+         bg-ink/[0.05] border border-transparent
          transition-all duration-200
-         hover:bg-ink/[0.06] hover:border-ink/[0.1];
+         hover:bg-ink/[0.09] hover:border-ink/[0.15];
 }
 .question-thumb.active {
   @apply bg-answer-blue/10 border-answer-blue/40;

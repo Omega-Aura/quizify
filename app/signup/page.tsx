@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { Logo } from '@/components/Logo';
+import { PasswordInput } from '@/components/PasswordInput';
+
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -12,6 +15,7 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'HOST' | 'PARTICIPANT'>('PARTICIPANT');
   const [hostKey, setHostKey] = useState('');
   const [error, setError] = useState('');
@@ -20,8 +24,19 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
+    if (!PASSWORD_REGEX.test(password)) {
+      setError(
+        'Password must be 8+ characters and include upper & lower case letters, a number, and a symbol'
+      );
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
     try {
       const user = await signup(email, password, name, role, role === 'HOST' ? hostKey : undefined);
       router.push(user.role === 'HOST' ? '/dashboard' : '/');
@@ -127,14 +142,23 @@ export default function SignupPage() {
 
           <div>
             <label htmlFor="signup-password" className="input-label">Password</label>
-            <input
+            <PasswordInput
               id="signup-password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder="At least 6 characters"
-              minLength={6}
+              placeholder="8+ chars, upper & lower case, a number, a symbol"
+              minLength={8}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="signup-confirm-password" className="input-label">Confirm password</label>
+            <PasswordInput
+              id="signup-confirm-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
               required
             />
           </div>

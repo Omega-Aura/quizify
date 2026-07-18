@@ -80,3 +80,6 @@ coverage/
 
 # Stray Windows redirect artifact (e.g. `cmd > nul` run under a POSIX shell)
 nul
+
+DEPLOYMENT.md
+CLAUDE.md

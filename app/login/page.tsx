@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { Logo } from '@/components/Logo';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -65,12 +66,10 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="login-password" className="input-label">Password</label>
-            <input
+            <PasswordInput
               id="login-password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
               placeholder="••••••••"
               required
             />
