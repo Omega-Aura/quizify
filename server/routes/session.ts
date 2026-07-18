@@ -26,6 +26,14 @@ sessionRoutes.post('/create', hostOnly, async (c) => {
     return c.json({ message: 'Quiz has no questions' }, 400);
   }
 
+  // Close any lingering unfinished sessions of this quiz (e.g. the host
+  // closed the tab without ending the game). Otherwise their PINs stay
+  // joinable forever and returning players see stale scores.
+  await prisma.session.updateMany({
+    where: { quizId, status: { not: 'FINISHED' } },
+    data: { status: 'FINISHED', endedAt: new Date() },
+  });
+
   // Generate unique PIN
   let pin: string;
   let attempts = 0;
@@ -80,9 +88,9 @@ sessionRoutes.get('/pin/:pin', async (c) => {
   });
 });
 
-// ─── GET /:id — get session details (for host) ──────────────────────
+// ─── GET /:id — get session details (host-owner only: includes correct answers) ──
 
-sessionRoutes.get('/:id', async (c) => {
+sessionRoutes.get('/:id', hostOnly, async (c) => {
   const sessionId = c.req.param('id');
 
   const session = await prisma.session.findUnique({
@@ -106,20 +114,23 @@ sessionRoutes.get('/:id', async (c) => {
   if (!session) {
     return c.json({ message: 'Session not found' }, 404);
   }
+  if (session.quiz.hostId !== c.get('userId')) {
+    return c.json({ message: 'Not your session' }, 403);
+  }
 
   return c.json({ session });
 });
 
 // ─── GET /:id/results — full results with per-question breakdown ─────
 
-sessionRoutes.get('/:id/results', async (c) => {
+sessionRoutes.get('/:id/results', hostOnly, async (c) => {
   const sessionId = c.req.param('id');
 
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: {
       quiz: {
-        select: { title: true },
+        select: { title: true, hostId: true },
       },
       players: {
         orderBy: { totalScore: 'desc' },
@@ -144,13 +155,16 @@ sessionRoutes.get('/:id/results', async (c) => {
   if (!session) {
     return c.json({ message: 'Session not found' }, 404);
   }
+  if (session.quiz.hostId !== c.get('userId')) {
+    return c.json({ message: 'Not your session' }, 403);
+  }
 
   return c.json({ session });
 });
 
 // ─── GET /:id/results/csv — export results as CSV ────────────────────
 
-sessionRoutes.get('/:id/results/csv', async (c) => {
+sessionRoutes.get('/:id/results/csv', hostOnly, async (c) => {
   const sessionId = c.req.param('id');
 
   const session = await prisma.session.findUnique({
@@ -178,6 +192,9 @@ sessionRoutes.get('/:id/results/csv', async (c) => {
 
   if (!session) {
     return c.json({ message: 'Session not found' }, 404);
+  }
+  if (session.quiz.hostId !== c.get('userId')) {
+    return c.json({ message: 'Not your session' }, 403);
   }
 
   const questions = session.quiz.questions;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
@@ -14,6 +14,43 @@ export default function HomePage() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
+  // PIN supplied by a scanned QR deep-link (?pin=NNNNNN)
+  const [deepLinkPin, setDeepLinkPin] = useState('');
+  const autoJoinedRef = useRef(false);
+
+  const handleJoin = useCallback(
+    async (pinValue?: string) => {
+      const p = pinValue ?? pin;
+      if (p.length !== 6) {
+        setError('Enter a 6-digit PIN');
+        return;
+      }
+
+      setError('');
+      setChecking(true);
+
+      try {
+        const data = await api.get<{ session: { id: string; status: string } }>(
+          `/api/session/pin/${p}`
+        );
+        router.push(`/join/${data.session.id}?pin=${p}`);
+      } catch (err: any) {
+        setError(err.message || 'Session not found');
+        setChecking(false);
+      }
+    },
+    [pin, router]
+  );
+
+  // Read the QR deep-link PIN once on mount and pre-fill it
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get('pin') || '';
+    const digits = raw.replace(/\D/g, '').slice(0, 6);
+    if (digits) {
+      setDeepLinkPin(digits);
+      setPin(digits);
+    }
+  }, []);
 
   // Redirect hosts to dashboard
   useEffect(() => {
@@ -22,26 +59,18 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  const handleJoin = async () => {
-    if (pin.length !== 6) {
-      setError('Enter a 6-digit PIN');
-      return;
-    }
+  // A signed-in participant arriving via QR auto-joins with the pre-filled PIN
+  useEffect(() => {
+    if (loading || !user || user.role === 'HOST') return;
+    if (!deepLinkPin || autoJoinedRef.current) return;
+    autoJoinedRef.current = true;
+    handleJoin(deepLinkPin);
+  }, [loading, user, deepLinkPin, handleJoin]);
 
-    setError('');
-    setChecking(true);
-
-    try {
-      const data = await api.get<{ session: { id: string; status: string } }>(
-        `/api/session/pin/${pin}`
-      );
-      router.push(`/join/${data.session.id}?pin=${pin}`);
-    } catch (err: any) {
-      setError(err.message || 'Session not found');
-    } finally {
-      setChecking(false);
-    }
-  };
+  // Preserve the PIN across the auth gate so not-signed-in scanners land back here
+  const nextParam = deepLinkPin
+    ? `?next=${encodeURIComponent(`/?pin=${deepLinkPin}`)}`
+    : '';
 
   const handlePinChange = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 6);
@@ -69,10 +98,10 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <Link href="/login" className="btn-secondary text-sm !px-4 !py-2">
+              <Link href={`/login${nextParam}`} className="btn-secondary text-sm !px-4 !py-2">
                 Log in
               </Link>
-              <Link href="/signup" className="btn-primary text-sm !px-4 !py-2">
+              <Link href={`/signup${nextParam}`} className="btn-primary text-sm !px-4 !py-2">
                 Sign up
               </Link>
             </>
@@ -122,12 +151,16 @@ export default function HomePage() {
           ) : !user ? (
             /* Gate: must log in or sign up before entering a PIN */
             <div className="animate-slide-up animate-delay-200 flex flex-col items-center gap-5">
-              <p className="text-ink/50">Log in or sign up to join a game</p>
+              <p className="text-ink/50">
+                {deepLinkPin
+                  ? `Log in or sign up to join game ${deepLinkPin}`
+                  : 'Log in or sign up to join a game'}
+              </p>
               <div className="flex items-center gap-4">
-                <Link href="/login" className="btn-secondary text-lg px-8 py-4">
+                <Link href={`/login${nextParam}`} className="btn-secondary text-lg px-8 py-4">
                   Log in
                 </Link>
-                <Link href="/signup" className="btn-primary text-lg px-8 py-4">
+                <Link href={`/signup${nextParam}`} className="btn-primary text-lg px-8 py-4">
                   Sign up
                 </Link>
               </div>
@@ -156,7 +189,7 @@ export default function HomePage() {
               )}
 
               <button
-                onClick={handleJoin}
+                onClick={() => handleJoin()}
                 disabled={pin.length !== 6 || checking}
                 className="btn-primary text-lg px-12 py-4 mt-6 animate-slide-up animate-delay-300"
               >

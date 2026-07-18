@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { connectSocket, getSocket, disconnectSocket } from '@/lib/socket';
+import { TrophyIcon, PartyPopperIcon, ButtonPlayIcon } from '@/components/icons';
+import { QRCodeSVG } from 'qrcode.react';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -38,6 +40,20 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
   const [leaderboard, setLeaderboard] = useState<Player[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [quizTitle, setQuizTitle] = useState('');
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playersRef = useRef<Player[]>([]);
+  playersRef.current = players;
+
+  // Deep-link players scan to join with the PIN pre-filled (set after mount
+  // so window is available and the URL matches whatever origin serves the app)
+  const [joinUrl, setJoinUrl] = useState('');
+  const [joinHost, setJoinHost] = useState('');
+  useEffect(() => {
+    if (!pin) return;
+    const origin = window.location.origin;
+    setJoinUrl(`${origin}/?pin=${pin}`);
+    setJoinHost(new URL(origin).host);
+  }, [pin]);
 
   // ─── Load session data ────────────────────────────────────────────
 
@@ -77,19 +93,18 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
       setCurrentIndex(data.index);
       setPhase('QUESTION');
       setTimeLeft(data.timeLimit);
-      setAnswerCount({ answered: 0, total: players.length });
+      setAnswerCount({ answered: 0, total: playersRef.current.length });
       setAnswerCounts({});
 
-      // Countdown
-      const start = Date.now();
-      const interval = setInterval(() => {
-        const elapsed = (Date.now() - start) / 1000;
+      // Countdown synced to the server's question start timestamp
+      if (timerRef.current) clearInterval(timerRef.current);
+      const startTime = data.serverStartTs || Date.now();
+      timerRef.current = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
         const remaining = Math.max(0, data.timeLimit - elapsed);
         setTimeLeft(remaining);
-        if (remaining <= 0) clearInterval(interval);
+        if (remaining <= 0 && timerRef.current) clearInterval(timerRef.current);
       }, 100);
-
-      return () => clearInterval(interval);
     });
 
     socket.on('answer:count', (data: { answered: number; total: number }) => {
@@ -97,6 +112,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
     });
 
     socket.on('question:result', (data: any) => {
+      if (timerRef.current) clearInterval(timerRef.current);
       setAnswerCounts(data.answerCounts || {});
       setCorrectIndices(data.correctIndices || []);
       setPhase('REVEAL');
@@ -118,15 +134,18 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
       socket.off('question:result');
       socket.off('leaderboard:update');
       socket.off('session:final');
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [sessionId, token, players.length]);
+  }, [sessionId, token]);
 
   // ─── Actions ──────────────────────────────────────────────────────
 
   const startGame = () => getSocket().emit('host:start');
   const revealAnswer = () => getSocket().emit('host:reveal');
   const nextQuestion = () => {
-    setPhase('QUESTION');
+    // Phase flips to QUESTION when the server's question:show arrives —
+    // flipping it here would briefly show the previous question's stale
+    // content and timer during the round trip.
     getSocket().emit('host:next');
   };
   const showLeaderboard = () => setPhase('LEADERBOARD');
@@ -146,7 +165,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
             <p className="text-xs text-ink/40">{questions.length} questions</p>
           </div>
           <button onClick={startGame} disabled={players.length === 0} className="btn-primary">
-            ▶ Start Game ({players.length} player{players.length !== 1 ? 's' : ''})
+            <ButtonPlayIcon size={16} /> Start Game ({players.length} player{players.length !== 1 ? 's' : ''})
           </button>
         </header>
 
@@ -156,9 +175,17 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
             <div className="text-7xl sm:text-8xl font-mono font-bold tracking-[0.15em] text-brand-600 animate-breathe mb-4 [text-shadow:0_0_40px_rgba(61,139,255,0.4)]">
               {pin}
             </div>
-            <p className="text-ink/45">
-              Join at <span className="text-brand-600 font-medium">quizify.dev</span> or scan QR
+            <p className="text-ink/45 mb-6">
+              Join at{' '}
+              <span className="text-brand-600 font-medium">{joinHost || 'quizify.aritra.tech'}</span>{' '}
+              or scan the code
             </p>
+            {joinUrl && (
+              <div className="inline-flex flex-col items-center gap-2 p-4 rounded-2xl bg-white border border-ink/[0.12] shadow-[0_16px_40px_-22px_rgba(23,26,46,0.25)]">
+                <QRCodeSVG value={joinUrl} size={168} level="M" fgColor="#171a2e" bgColor="#ffffff" />
+                <span className="text-xs text-ink/45 font-medium">Scan to join</span>
+              </div>
+            )}
           </div>
 
           {/* Players */}
@@ -293,11 +320,11 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
         {/* Controls */}
         <div className="flex justify-center gap-4 mt-8">
           <button onClick={showLeaderboard} className="btn-secondary">
-            🏆 Leaderboard
+            <TrophyIcon size={16} /> Leaderboard
           </button>
           {isLastQuestion ? (
             <button onClick={endGame} className="btn-primary text-lg px-8">
-              End Game 🎉
+              End Game <PartyPopperIcon size={18} />
             </button>
           ) : (
             <button onClick={nextQuestion} className="btn-primary text-lg px-8">
@@ -315,7 +342,9 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center max-w-lg w-full">
-          <h2 className="text-4xl font-extrabold mb-8 animate-fade-in">🏆 Leaderboard</h2>
+          <h2 className="text-4xl font-extrabold mb-8 animate-fade-in flex items-center justify-center gap-3">
+            <TrophyIcon size={36} /> Leaderboard
+          </h2>
 
           <div className="space-y-3">
             {leaderboard.map((player, i) => (
@@ -341,7 +370,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
           <div className="flex justify-center gap-4 mt-10">
             {isLastQuestion ? (
               <button onClick={endGame} className="btn-primary text-lg px-8">
-                End Game 🎉
+                End Game <PartyPopperIcon size={18} />
               </button>
             ) : (
               <button onClick={nextQuestion} className="btn-primary text-lg px-8">
@@ -360,7 +389,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center animate-bounce-in">
-          <div className="text-6xl mb-4">🎉</div>
+          <PartyPopperIcon size={64} className="mx-auto mb-4" />
           <h1 className="text-4xl font-extrabold text-gradient mb-4">Game Over!</h1>
           <p className="text-ink/40 mb-8">Great session! Check out the full results.</p>
           <div className="flex gap-4 justify-center">

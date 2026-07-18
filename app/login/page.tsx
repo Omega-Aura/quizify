@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
@@ -14,6 +14,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Where to return after auth (e.g. a QR deep-link `/?pin=...`)
+  const [next, setNext] = useState('');
+  useEffect(() => {
+    setNext(new URLSearchParams(window.location.search).get('next') || '');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +27,7 @@ export default function LoginPage() {
 
     try {
       const user = await login(email, password);
-      router.push(user.role === 'HOST' ? '/dashboard' : '/');
+      router.push(next || (user.role === 'HOST' ? '/dashboard' : '/'));
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {
@@ -91,7 +96,10 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-ink/40">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-brand-600 hover:text-brand-600 underline underline-offset-4">
+            <Link
+              href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+              className="text-brand-600 hover:text-brand-600 underline underline-offset-4"
+            >
               Sign up
             </Link>
           </p>

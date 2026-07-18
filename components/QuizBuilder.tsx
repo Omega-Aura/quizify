@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Select } from '@/components/Select';
+import { ClipboardAddIcon, CopyPasteIcon, RecycleBinIcon, PicturesIcon } from '@/components/icons';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -339,7 +340,7 @@ export function QuizBuilder({
         <div className="flex items-center gap-3">
           {error && <span className="text-red-600 text-sm">{error}</span>}
           <button onClick={() => setShowBulkImport(true)} className="btn-secondary text-sm !px-3 !py-2">
-            📋 Bulk Import
+            <ClipboardAddIcon size={16} /> Bulk Import
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm !px-6">
             {saving ? 'Saving...' : quizId ? 'Update Quiz' : 'Create Quiz'}
@@ -452,7 +453,7 @@ export function QuizBuilder({
                 </div>
               ) : (
                 <div className="text-ink/45">
-                  <p className="text-3xl mb-2">🖼️</p>
+                  <PicturesIcon size={40} className="mx-auto mb-2" />
                   <p className="text-sm">Click to upload an image or drag and drop</p>
                 </div>
               )}
@@ -599,14 +600,14 @@ export function QuizBuilder({
                 onClick={() => duplicateQuestion(activeIndex)}
                 className="btn-secondary w-full text-sm !py-2"
               >
-                📋 Duplicate
+                <CopyPasteIcon size={16} /> Duplicate
               </button>
               <button
                 onClick={() => deleteQuestion(activeIndex)}
                 disabled={questions.length <= 1}
                 className="btn-danger w-full text-sm !py-2"
               >
-                🗑️ Delete
+                <RecycleBinIcon size={16} /> Delete
               </button>
             </div>
           </div>

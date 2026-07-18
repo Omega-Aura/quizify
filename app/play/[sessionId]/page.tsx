@@ -3,6 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSocket, connectSocket } from '@/lib/socket';
+import {
+  TrophyIcon,
+  ControllerIcon,
+  PartyPopperIcon,
+  SmileySurprisedIcon,
+  CrownIcon,
+  StarBadgeIcon,
+  StarIcon,
+} from '@/components/icons';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -80,6 +89,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
   const [phase, setPhase] = useState<GamePhase>('WAITING');
   const [question, setQuestion] = useState<QuestionData | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [expired, setExpired] = useState(false);
   const [result, setResult] = useState<ResultData | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -102,6 +112,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
       setResult(null);
       setLeaderboard(null);
       setPhase('QUESTION');
+      setExpired(false);
       setTimeLeft(data.timeLimit);
 
       // Start countdown using the server timestamp for proper sync
@@ -112,6 +123,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
         const remaining = Math.max(0, data.timeLimit - elapsed);
         setTimeLeft(remaining);
         if (remaining <= 0) {
+          setExpired(true);
           if (timerRef.current) clearInterval(timerRef.current);
         }
       }, 100);
@@ -147,9 +159,19 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     const onTimeUp = () => {
       if (timerRef.current) clearInterval(timerRef.current);
       setTimeLeft(0);
+      setExpired(true);
+    };
+
+    // Server rejected an answer that arrived past the deadline — undo the
+    // optimistic "answered" state so the player sees it did not count.
+    const onAnswerLate = () => {
+      setSelectedAnswer(null);
+      setPhase('QUESTION');
+      setExpired(true);
     };
 
     socket.on('question:show', onQuestionShow);
+    socket.on('player:answer:late', onAnswerLate);
     socket.on('player:answer:received', onAnswerReceived);
     socket.on('question:result', onQuestionResult);
     socket.on('leaderboard:update', onLeaderboardUpdate);
@@ -179,6 +201,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
 
     return () => {
       socket.off('question:show', onQuestionShow);
+      socket.off('player:answer:late', onAnswerLate);
       socket.off('player:answer:received', onAnswerReceived);
       socket.off('question:result', onQuestionResult);
       socket.off('leaderboard:update', onLeaderboardUpdate);
@@ -192,14 +215,14 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
 
   const submitAnswer = useCallback(
     (answerIndex: number) => {
-      if (phase !== 'QUESTION' || selectedAnswer !== null) return;
+      if (phase !== 'QUESTION' || selectedAnswer !== null || expired) return;
       setSelectedAnswer(answerIndex);
       setPhase('ANSWERED');
 
       const socket = getSocket();
       socket.emit('player:answer', { answerIndex });
     },
-    [phase, selectedAnswer]
+    [phase, selectedAnswer, expired]
   );
 
   // ─── Countdown ring ──────────────────────────────────────────────
@@ -215,8 +238,8 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center animate-fade-in">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-brand-600 flex items-center justify-center animate-pulse-slow">
-            <span className="text-3xl">🎮</span>
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-brand-600/15 border border-brand-500/30 flex items-center justify-center animate-pulse-slow">
+            <ControllerIcon size={44} />
           </div>
           <h1 className="text-2xl font-bold mb-2">Get Ready!</h1>
           <p className="text-ink/40">Waiting for the host to start...</p>
@@ -276,13 +299,18 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
           {question?.media && (
             <img src={question.media} alt="" className="max-h-40 mx-auto mt-4 rounded-xl" />
           )}
+          {expired && phase === 'QUESTION' && (
+            <p className="mt-4 text-red-600 font-bold animate-fade-in" role="status">
+              Time&apos;s up! Waiting for the reveal...
+            </p>
+          )}
         </div>
 
         {/* Answer tiles */}
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto w-full">
           {question?.answers.map((answer, i) => {
             const isSelected = selectedAnswer === i;
-            const isDisabled = phase === 'ANSWERED';
+            const isDisabled = phase === 'ANSWERED' || expired;
 
             return (
               <button
@@ -330,7 +358,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
               ? 'bg-green-500/20 border-2 border-green-500/40'
               : 'bg-red-500/20 border-2 border-red-500/40'
           }`}>
-            {result.isCorrect ? '🎉' : '😅'}
+            {result.isCorrect ? <PartyPopperIcon size={40} /> : <SmileySurprisedIcon size={40} />}
           </div>
 
           <h2 className={`text-3xl font-bold mb-2 ${result.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
@@ -396,7 +424,9 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-2 animate-fade-in">🏆 Leaderboard</h2>
+          <h2 className="text-2xl font-bold mb-2 animate-fade-in flex items-center justify-center gap-2">
+            <TrophyIcon size={26} /> Leaderboard
+          </h2>
           <p className="text-ink/40 mb-6 animate-fade-in">
             You&apos;re ranked <span className="text-brand-600 font-bold">#{leaderboard.yourRank}</span>
           </p>
@@ -437,8 +467,16 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center max-w-md w-full animate-bounce-in">
-          <div className="text-6xl mb-4">
-            {myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '🎮'}
+          <div className="mb-4 flex justify-center">
+            {myRank === 1 ? (
+              <CrownIcon size={64} />
+            ) : myRank === 2 ? (
+              <StarBadgeIcon size={64} />
+            ) : myRank === 3 ? (
+              <StarIcon size={64} />
+            ) : (
+              <ControllerIcon size={64} />
+            )}
           </div>
           <h1 className="text-4xl font-extrabold mb-2 text-gradient">Game Over!</h1>
           <p className="text-xl text-ink/50 mb-2">

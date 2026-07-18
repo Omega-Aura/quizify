@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
+import { TargetIcon, ButtonPlayIcon, PencilIcon, CopyPasteIcon, RecycleBinIcon } from '@/components/icons';
 
 interface Quiz {
   id: string;
@@ -133,7 +134,7 @@ export default function DashboardPage() {
         {/* Quiz grid */}
         {quizzes.length === 0 ? (
           <div className="glass-card p-16 text-center animate-fade-in">
-            <div className="text-5xl mb-4">🎯</div>
+            <TargetIcon size={56} className="mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">No quizzes yet</h2>
             <p className="text-ink/40 mb-6">Create your first quiz and start hosting live sessions</p>
             <Link href="/quiz/new" className="btn-primary">
@@ -168,13 +169,19 @@ export default function DashboardPage() {
                     disabled={actionLoading === quiz.id}
                     className="flex-1 btn-primary text-sm !px-3 !py-2.5"
                   >
-                    {actionLoading === quiz.id ? '...' : '▶ Host Live'}
+                    {actionLoading === quiz.id ? (
+                      '...'
+                    ) : (
+                      <>
+                        <ButtonPlayIcon size={16} /> Host Live
+                      </>
+                    )}
                   </button>
                   <Link
                     href={`/quiz/${quiz.id}/edit`}
                     className="btn-secondary text-sm !px-3 !py-2.5"
                   >
-                    ✏️
+                    <PencilIcon size={18} />
                   </Link>
                   <button
                     onClick={() => handleDuplicate(quiz.id)}
@@ -182,7 +189,7 @@ export default function DashboardPage() {
                     className="btn-secondary text-sm !px-3 !py-2.5"
                     title="Duplicate"
                   >
-                    📋
+                    <CopyPasteIcon size={18} />
                   </button>
                   <button
                     onClick={() => handleDelete(quiz.id)}
@@ -190,7 +197,7 @@ export default function DashboardPage() {
                     className="btn-danger text-sm !px-3 !py-2.5"
                     title="Delete"
                   >
-                    🗑️
+                    <RecycleBinIcon size={18} />
                   </button>
                 </div>
               </div>

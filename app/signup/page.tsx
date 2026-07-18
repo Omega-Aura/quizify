@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { Logo } from '@/components/Logo';
 import { PasswordInput } from '@/components/PasswordInput';
+import { ControllerIcon, TargetIcon } from '@/components/icons';
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 
@@ -20,6 +21,11 @@ export default function SignupPage() {
   const [hostKey, setHostKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Where to return after auth (e.g. a QR deep-link `/?pin=...`)
+  const [next, setNext] = useState('');
+  useEffect(() => {
+    setNext(new URLSearchParams(window.location.search).get('next') || '');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +45,8 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const user = await signup(email, password, name, role, role === 'HOST' ? hostKey : undefined);
-      router.push(user.role === 'HOST' ? '/dashboard' : '/');
+      // A host has no game to return to — always send them to the dashboard
+      router.push(user.role === 'HOST' ? '/dashboard' : next || '/');
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
@@ -80,7 +87,7 @@ export default function SignupPage() {
                     : 'bg-ink/[0.04] border-ink/[0.08] text-ink/50 hover:bg-ink/[0.06]'
                 }`}
               >
-                <span className="text-2xl block mb-1">🎮</span>
+                <ControllerIcon size={28} className="mx-auto mb-1" />
                 <span className="text-sm font-medium">Play quizzes</span>
               </button>
               <button
@@ -92,7 +99,7 @@ export default function SignupPage() {
                     : 'bg-ink/[0.04] border-ink/[0.08] text-ink/50 hover:bg-ink/[0.06]'
                 }`}
               >
-                <span className="text-2xl block mb-1">🎯</span>
+                <TargetIcon size={28} className="mx-auto mb-1" />
                 <span className="text-sm font-medium">Create & host</span>
               </button>
             </div>
@@ -179,7 +186,10 @@ export default function SignupPage() {
 
           <p className="text-center text-sm text-ink/40">
             Already have an account?{' '}
-            <Link href="/login" className="text-brand-600 hover:text-brand-600 underline underline-offset-4">
+            <Link
+              href={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+              className="text-brand-600 hover:text-brand-600 underline underline-offset-4"
+            >
               Sign in
             </Link>
           </p>

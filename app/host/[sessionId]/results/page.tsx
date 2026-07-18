@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { TrophyIcon, DownloadBoxIcon, CrownIcon, StarBadgeIcon, StarIcon } from '@/components/icons';
 
 interface PlayerResult {
   id: string;
@@ -51,11 +52,20 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
     }
   }, [user, sessionId, router]);
 
-  const downloadCSV = () => {
-    window.open(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/session/${sessionId}/results/csv`,
-      '_blank'
+  const downloadCSV = async () => {
+    // window.open can't send the Authorization header, so fetch + blob URL
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/session/${sessionId}/results/csv`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('quizify_token')}` } }
     );
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quizify-results-${sessionId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (authLoading || loading || !session) {
@@ -87,7 +97,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
             <h1 className="text-xl font-bold mt-1">{session.quiz.title} — Results</h1>
           </div>
           <button onClick={downloadCSV} className="btn-secondary text-sm">
-            📥 Export CSV
+            <DownloadBoxIcon size={16} /> Export CSV
           </button>
         </div>
       </header>
@@ -96,7 +106,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
         {/* Winner highlight */}
         {winner && (
           <div className="glass-card p-8 text-center mb-8 animate-bounce-in">
-            <div className="text-5xl mb-3">🏆</div>
+            <TrophyIcon size={52} className="mx-auto mb-3" />
             <p className="text-sm text-ink/40 mb-1">Winner</p>
             <h2 className="text-3xl font-extrabold text-gradient mb-2">{winner.nickname}</h2>
             <p className="text-2xl font-bold text-brand-600">{winner.totalScore} points</p>
@@ -109,7 +119,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
             {/* 2nd place */}
             <div className="text-center animate-slide-up animate-delay-100">
               <div className="w-16 h-16 mx-auto rounded-full bg-slate-400/20 border-2 border-slate-400/40 flex items-center justify-center text-2xl mb-2">
-                🥈
+                <StarBadgeIcon size={30} />
               </div>
               <p className="font-bold truncate max-w-[100px]">{players[1].nickname}</p>
               <p className="text-sm text-ink/40">{players[1].totalScore} pts</p>
@@ -117,7 +127,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
             {/* 1st place */}
             <div className="text-center animate-slide-up">
               <div className="w-20 h-20 mx-auto rounded-full bg-yellow-500/20 border-2 border-yellow-500/40 flex items-center justify-center text-3xl mb-2">
-                🥇
+                <CrownIcon size={38} />
               </div>
               <p className="font-bold text-lg truncate max-w-[120px]">{players[0].nickname}</p>
               <p className="text-sm text-brand-600">{players[0].totalScore} pts</p>
@@ -125,7 +135,7 @@ export default function HostResultsPage({ params }: { params: { sessionId: strin
             {/* 3rd place */}
             <div className="text-center animate-slide-up animate-delay-200">
               <div className="w-16 h-16 mx-auto rounded-full bg-orange-700/20 border-2 border-orange-700/40 flex items-center justify-center text-2xl mb-2">
-                🥉
+                <StarIcon size={30} />
               </div>
               <p className="font-bold truncate max-w-[100px]">{players[2].nickname}</p>
               <p className="text-sm text-ink/40">{players[2].totalScore} pts</p>

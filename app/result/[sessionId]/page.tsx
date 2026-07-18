@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { ControllerIcon, CrownIcon, StarBadgeIcon, StarIcon } from '@/components/icons';
 
 interface PlayerData {
   id: string;
@@ -68,8 +69,16 @@ export default function ResultPage({ params }: { params: { sessionId: string } }
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-bounce-in">
-          <div className="text-5xl mb-3">
-            {player.rank === 1 ? '🥇' : player.rank === 2 ? '🥈' : player.rank === 3 ? '🥉' : '🎮'}
+          <div className="mb-3 flex justify-center">
+            {player.rank === 1 ? (
+              <CrownIcon size={56} />
+            ) : player.rank === 2 ? (
+              <StarBadgeIcon size={56} />
+            ) : player.rank === 3 ? (
+              <StarIcon size={56} />
+            ) : (
+              <ControllerIcon size={56} />
+            )}
           </div>
           <p className="text-sm text-ink/40 mb-1">{player.quizTitle}</p>
           <h1 className="text-3xl font-extrabold text-gradient mb-2">{player.nickname}</h1>

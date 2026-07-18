@@ -126,6 +126,10 @@ score = round(1000 × (1 - (responseMs / timeLimitMs) / 2))
 - Incorrect: 0 points
 - Multiplied by points mode (1x, 2x, or 0)
 
+## Credits
+
+Icons from [Streamline](https://www.streamlinehq.com) (Core Color free set), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
 ## License
 
 MIT

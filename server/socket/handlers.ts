@@ -245,9 +245,10 @@ export function setupSocket(io: Server) {
         // Confirm answer received
         socket.emit('player:answer:received', { answerIndex: data.answerIndex });
 
-        // Broadcast answer count to host
+        // Broadcast answer count to host — scope to this session's players,
+        // since the same quiz (and question) can be run in many sessions
         const responseCount = await prisma.response.count({
-          where: { questionId: timer.questionId },
+          where: { questionId: timer.questionId, player: { sessionId } },
         });
         const playerCount = await prisma.player.count({
           where: { sessionId },
@@ -292,9 +293,9 @@ export function setupSocket(io: Server) {
           .filter((a) => a.isCorrect)
           .map((a) => a.index);
 
-        // Get answer distribution
+        // Get answer distribution — scoped to this session's players only
         const responses = await prisma.response.findMany({
-          where: { questionId: question.id },
+          where: { questionId: question.id, player: { sessionId } },
         });
 
         const answerCounts: Record<number, number> = {};
