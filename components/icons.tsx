@@ -1,8 +1,8 @@
 // Streamline Core Color icons (https://www.streamlinehq.com) — CC BY 4.0.
 // Vector paths inlined via Iconify (https://iconify.design), recolored to the
-// Quizify "Core" palette taken from icons/*.png (the source-of-truth set):
-//   navy stroke #0c098c, fills yellow #fddc5c / green #79ee8d / coral #ff7972 /
-//   cyan #7af1ff, white #fff highlights. Do not edit the path geometry by hand.
+// Quizify "Core" palette: navy stroke #0c098c, fills yellow #fddc5c / green
+// #79ee8d / coral #ff7972 / cyan #7af1ff, white #fff highlights. Do not edit
+// the path geometry by hand.
 import { SVGProps } from 'react';
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
