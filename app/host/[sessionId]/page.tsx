@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { connectSocket, getSocket, disconnectSocket } from '@/lib/socket';
 import { TrophyIcon, PartyPopperIcon, ButtonPlayIcon } from '@/components/icons';
 import { QRCodeSVG } from 'qrcode.react';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -409,15 +410,5 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
   }
 
   // Loading
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="flex items-center gap-3 text-ink/50">
-        <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        Loading session...
-      </div>
-    </div>
-  );
+  return <LoadingScreen label="Loading session..." />;
 }

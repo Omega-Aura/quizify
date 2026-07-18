@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { TargetIcon, ButtonPlayIcon, PencilIcon, CopyPasteIcon, RecycleBinIcon } from '@/components/icons';
 
 interface Quiz {
@@ -85,17 +86,7 @@ export default function DashboardPage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3 text-ink/50">
-          <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Loading...
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
