@@ -1,6 +1,6 @@
 {
   "name": "quizify",
-  "version": "1.2.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev:web\" \"npm run dev:server\"",
