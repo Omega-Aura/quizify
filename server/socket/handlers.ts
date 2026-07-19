@@ -2,17 +2,28 @@ import { Server, Socket } from 'socket.io';
 import { prisma } from '../lib/prisma';
 import { calculateScore } from '../lib/scoring';
 import { verifyToken } from '../middleware/auth';
+import {
+  LiveSession,
+  getSession,
+  getOrLoadSessionById,
+  getOrLoadSessionByPin,
+  deleteSession,
+  addPlayer,
+  attachSocket,
+  detachSocket,
+  recordAnswer,
+  startQuestion,
+  clearQuestionTimeout,
+  getLobbyPlayers,
+  getLeaderboard,
+  flushSession,
+  waitForCleanFlush,
+} from '../lib/sessionStore';
 
-interface QuestionTimer {
-  questionId: string;
-  timeLimitMs: number;
-  startedAt: number; // Date.now()
-  timeout: NodeJS.Timeout;
-}
+// Gameplay state lives in server/lib/sessionStore.ts (memory-authoritative,
+// batch-flushed to Postgres). Handlers here are a thin event layer.
 
-// In-memory state per session
-const sessionTimers = new Map<string, QuestionTimer>();
-const playerSockets = new Map<string, string>(); // socketId → playerId
+const LOBBY_BROADCAST_THROTTLE_MS = 300;
 
 export function setupSocket(io: Server) {
   io.on('connection', (socket: Socket) => {
@@ -23,83 +34,78 @@ export function setupSocket(io: Server) {
       try {
         const { pin, nickname, token } = data;
 
-        const session = await prisma.session.findUnique({
-          where: { pin },
-          include: { players: { select: { id: true, nickname: true } } },
-        });
-
-        if (!session || session.status === 'FINISHED') {
+        const ls = await getOrLoadSessionByPin(pin);
+        if (!ls) {
           socket.emit('error', { message: 'Session not found or has ended' });
           return;
         }
+        resumeTimerIfNeeded(io, ls);
 
         // Optionally link to user account
         let userId: string | undefined;
         if (token) {
           try {
-            const payload = verifyToken(token);
-            userId = payload.userId;
+            userId = verifyToken(token).userId;
           } catch { /* anonymous join is fine */ }
         }
 
-        // Check for existing player (reconnect scenario)
-        let player = await prisma.player.findFirst({
-          where: { sessionId: session.id, nickname },
-        });
+        // Reconnect scenario: nickname already known to this session
+        const existingId = ls.playersByNickname.get(nickname);
+        let player = existingId ? ls.players.get(existingId) : undefined;
 
         if (!player) {
-          if (session.status !== 'LOBBY') {
+          if (ls.status !== 'LOBBY') {
             socket.emit('error', { message: 'Game has already started' });
             return;
           }
-          player = await prisma.player.create({
-            data: { sessionId: session.id, nickname, userId },
-          });
+          // Kept synchronous: player:joined needs a stable id, and the row
+          // must exist before any Response flush references it.
+          try {
+            const row = await prisma.player.create({
+              data: { sessionId: ls.id, nickname, userId },
+            });
+            player = addPlayer(ls, row);
+          } catch (err) {
+            // Two sockets racing the same nickname — treat loser as reconnect
+            if ((err as { code?: string }).code === 'P2002') {
+              const row = await prisma.player.findFirst({
+                where: { sessionId: ls.id, nickname },
+              });
+              if (!row) throw err;
+              player = ls.players.get(row.id) ?? addPlayer(ls, row);
+            } else {
+              throw err;
+            }
+          }
         }
 
-        // Map socket to player
-        playerSockets.set(socket.id, player.id);
-
-        // Join the socket.io room
-        socket.join(`session:${session.id}`);
-        socket.data.sessionId = session.id;
+        attachSocket(ls, player.id, socket.id);
+        socket.join(`session:${ls.id}`);
+        socket.data.sessionId = ls.id;
         socket.data.playerId = player.id;
 
         // Send join confirmation
         socket.emit('player:joined', {
           playerId: player.id,
-          sessionId: session.id,
+          sessionId: ls.id,
           nickname: player.nickname,
           totalScore: player.totalScore,
         });
 
-        // Broadcast updated player list
-        const players = await prisma.player.findMany({
-          where: { sessionId: session.id },
-          select: { id: true, nickname: true, totalScore: true },
-          orderBy: { joinedAt: 'asc' },
-        });
+        broadcastLobby(io, ls);
 
-        io.to(`session:${session.id}`).emit('lobby:update', { players });
-
-        // If game already active (reconnect), send current state
-        if (session.status === 'ACTIVE' || session.status === 'REVEALING') {
-          const questions = await prisma.question.findMany({
-            where: { quizId: session.quizId },
-            orderBy: { order: 'asc' },
-            include: { answers: { orderBy: { index: 'asc' } } },
-          });
-          const currentQ = questions[session.currentQuestionIndex];
+        // If game already active (reconnect), send current state from cache
+        if (ls.status === 'ACTIVE' || ls.status === 'REVEALING') {
+          const currentQ = ls.questions[ls.currentQuestionIndex];
           if (currentQ) {
-            const timer = sessionTimers.get(session.id);
             socket.emit('question:show', {
-              index: session.currentQuestionIndex,
+              index: ls.currentQuestionIndex,
               prompt: currentQ.prompt,
               media: currentQ.mediaUrl,
               answers: currentQ.answers.map((a) => ({ index: a.index, text: a.text })),
               timeLimit: currentQ.timeLimit,
-              serverStartTs: timer?.startedAt ?? Date.now(),
-              totalQuestions: questions.length,
+              serverStartTs: ls.timer?.startedAt ?? Date.now(),
+              totalQuestions: ls.questions.length,
             });
           }
         }
@@ -115,18 +121,12 @@ export function setupSocket(io: Server) {
         const { sessionId, token } = data;
         const payload = verifyToken(token);
 
-        const session = await prisma.session.findUnique({
-          where: { id: sessionId },
-          include: {
-            quiz: { select: { hostId: true } },
-            players: { select: { id: true, nickname: true, totalScore: true }, orderBy: { joinedAt: 'asc' } },
-          },
-        });
-
-        if (!session || session.quiz.hostId !== payload.userId) {
+        const ls = await getOrLoadSessionById(sessionId);
+        if (!ls || ls.hostId !== payload.userId) {
           socket.emit('error', { message: 'Session not found or unauthorized' });
           return;
         }
+        resumeTimerIfNeeded(io, ls);
 
         socket.join(`session:${sessionId}`);
         socket.join(`host:${sessionId}`);
@@ -134,11 +134,31 @@ export function setupSocket(io: Server) {
         socket.data.isHost = true;
 
         socket.emit('host:joined', {
-          sessionId: session.id,
-          pin: session.pin,
-          status: session.status,
-          players: session.players,
+          sessionId: ls.id,
+          pin: ls.pin,
+          status: ls.status,
+          players: getLobbyPlayers(ls),
         });
+
+        // Host page reload mid-game: restore the question view + answer count
+        if (ls.status === 'ACTIVE' || ls.status === 'REVEALING') {
+          const currentQ = ls.questions[ls.currentQuestionIndex];
+          if (currentQ) {
+            socket.emit('question:show', {
+              index: ls.currentQuestionIndex,
+              prompt: currentQ.prompt,
+              media: currentQ.mediaUrl,
+              answers: currentQ.answers.map((a) => ({ index: a.index, text: a.text })),
+              timeLimit: currentQ.timeLimit,
+              serverStartTs: ls.timer?.startedAt ?? Date.now(),
+              totalQuestions: ls.questions.length,
+            });
+            socket.emit('answer:count', {
+              answered: ls.answered.size,
+              total: ls.players.size,
+            });
+          }
+        }
       } catch (err) {
         console.error('host:join error:', err);
         socket.emit('error', { message: 'Failed to join as host' });
@@ -151,71 +171,57 @@ export function setupSocket(io: Server) {
         const sessionId = socket.data.sessionId;
         if (!sessionId || !socket.data.isHost) return;
 
-        const session = await prisma.session.update({
-          where: { id: sessionId },
-          data: {
-            status: 'ACTIVE',
-            startedAt: new Date(),
-            currentQuestionIndex: 0,
-          },
-        });
+        const ls = await getOrLoadSessionById(sessionId);
+        if (!ls) return;
 
-        const questions = await prisma.question.findMany({
-          where: { quizId: session.quizId },
-          orderBy: { order: 'asc' },
-          include: { answers: { orderBy: { index: 'asc' } } },
-        });
-
-        if (questions.length === 0) {
+        if (ls.questions.length === 0) {
           socket.emit('error', { message: 'No questions in quiz' });
           return;
         }
 
-        const currentQ = questions[0];
-        sendQuestion(io, sessionId, currentQ, 0, questions.length);
+        // Lifecycle transition — kept synchronous so restart resync works
+        await prisma.session.update({
+          where: { id: sessionId },
+          data: { status: 'ACTIVE', startedAt: new Date(), currentQuestionIndex: 0 },
+        });
+
+        sendQuestion(io, ls, 0);
       } catch (err) {
         console.error('host:start error:', err);
       }
     });
 
-    // ─── Player submits an answer ──────────────────────────────────
-    socket.on('player:answer', async (data: { answerIndex: number }) => {
+    // ─── Player submits an answer (zero DB round-trips) ────────────
+    socket.on('player:answer', (data: { answerIndex: number }) => {
       try {
         const sessionId = socket.data.sessionId;
         const playerId = socket.data.playerId;
         if (!sessionId || !playerId) return;
 
-        const timer = sessionTimers.get(sessionId);
+        const ls = getSession(sessionId);
+        if (!ls || ls.status !== 'ACTIVE') return;
+
+        const timer = ls.timer;
         if (!timer) return;
 
-        const now = Date.now();
-        const responseMs = now - timer.startedAt;
+        const responseMs = Date.now() - timer.startedAt;
 
-        // Check deadline
-        if (responseMs > timer.timeLimitMs + 1000) { // 1s grace period
+        // Check deadline (1s grace period)
+        if (responseMs > timer.timeLimitMs + 1000) {
           socket.emit('player:answer:late', { message: 'Too late!' });
           return;
         }
 
-        // Check for duplicate submission
-        const existing = await prisma.response.findUnique({
-          where: { playerId_questionId: { playerId, questionId: timer.questionId } },
-        });
-        if (existing) {
+        // Duplicate check — synchronous, so no race window
+        if (ls.answered.has(playerId)) {
           socket.emit('player:answer:duplicate', { message: 'Already answered' });
           return;
         }
 
-        // Get question + correct answer
-        const question = await prisma.question.findUnique({
-          where: { id: timer.questionId },
-          include: { answers: true },
-        });
-        if (!question) return;
+        const question = ls.questions[ls.currentQuestionIndex];
+        if (!question || question.id !== timer.questionId) return;
 
-        const correctAnswer = question.answers.find((a) => a.isCorrect);
-        const isCorrect = correctAnswer?.index === data.answerIndex;
-
+        const isCorrect = question.correctIndices.includes(data.answerIndex);
         const points = calculateScore(
           Math.min(responseMs, timer.timeLimitMs),
           timer.timeLimitMs,
@@ -223,40 +229,20 @@ export function setupSocket(io: Server) {
           isCorrect
         );
 
-        // Save response
-        await prisma.response.create({
-          data: {
-            playerId,
-            questionId: timer.questionId,
-            answerIndex: data.answerIndex,
-            responseMs: Math.round(responseMs),
-            pointsAwarded: points,
-          },
+        // Memory only — persisted by the batch flusher
+        recordAnswer(ls, {
+          playerId,
+          questionId: question.id,
+          answerIndex: data.answerIndex,
+          responseMs: Math.round(responseMs),
+          pointsAwarded: points,
         });
 
-        // Update player total score
-        if (points > 0) {
-          await prisma.player.update({
-            where: { id: playerId },
-            data: { totalScore: { increment: points } },
-          });
-        }
-
-        // Confirm answer received
         socket.emit('player:answer:received', { answerIndex: data.answerIndex });
 
-        // Broadcast answer count to host — scope to this session's players,
-        // since the same quiz (and question) can be run in many sessions
-        const responseCount = await prisma.response.count({
-          where: { questionId: timer.questionId, player: { sessionId } },
-        });
-        const playerCount = await prisma.player.count({
-          where: { sessionId },
-        });
-
         io.to(`host:${sessionId}`).emit('answer:count', {
-          answered: responseCount,
-          total: playerCount,
+          answered: ls.answered.size,
+          total: ls.players.size,
         });
       } catch (err) {
         console.error('player:answer error:', err);
@@ -264,115 +250,65 @@ export function setupSocket(io: Server) {
     });
 
     // ─── Host reveals the answer ───────────────────────────────────
-    socket.on('host:reveal', async () => {
+    socket.on('host:reveal', () => {
       try {
         const sessionId = socket.data.sessionId;
         if (!sessionId || !socket.data.isHost) return;
 
-        // Clear timer
-        const timer = sessionTimers.get(sessionId);
-        if (timer) {
-          clearTimeout(timer.timeout);
-        }
+        const ls = getSession(sessionId);
+        if (!ls || (ls.status !== 'ACTIVE' && ls.status !== 'REVEALING')) return;
 
-        await prisma.session.update({
-          where: { id: sessionId },
-          data: { status: 'REVEALING' },
-        });
-
-        const question = timer
-          ? await prisma.question.findUnique({
-              where: { id: timer.questionId },
-              include: { answers: { orderBy: { index: 'asc' } } },
-            })
-          : null;
-
+        const question = ls.questions[ls.currentQuestionIndex];
         if (!question) return;
 
-        const correctIndices = question.answers
-          .filter((a) => a.isCorrect)
-          .map((a) => a.index);
+        clearQuestionTimeout(ls);
+        ls.status = 'REVEALING';
+        ls.lastActivity = Date.now();
 
-        // Get answer distribution — scoped to this session's players only
-        const responses = await prisma.response.findMany({
-          where: { questionId: question.id, player: { sessionId } },
-        });
+        // Fire-and-forget: kept only so a server restart mid-reveal resyncs
+        prisma.session
+          .update({ where: { id: sessionId }, data: { status: 'REVEALING' } })
+          .catch(console.error);
 
-        const answerCounts: Record<number, number> = {};
-        question.answers.forEach((a) => { answerCounts[a.index] = 0; });
-        responses.forEach((r) => {
-          answerCounts[r.answerIndex] = (answerCounts[r.answerIndex] || 0) + 1;
-        });
+        // Natural flush boundary — reveal never waits on it
+        void flushSession(ls).catch((err) =>
+          console.error(`Reveal flush failed for session ${ls.id} (will retry):`, err)
+        );
 
-        // Send result to all players
-        const players = await prisma.player.findMany({
-          where: { sessionId },
-          include: {
-            responses: {
-              where: { questionId: question.id },
-            },
-          },
-        });
+        const correctIndices = question.correctIndices;
+        const answerCounts = ls.answerCounts;
+        const { top10, rankByPlayerId } = getLeaderboard(ls);
 
-        // Send personalized results to each player
-        for (const player of players) {
-          const playerResponse = player.responses[0];
-          const sockets = await io.in(`session:${sessionId}`).fetchSockets();
-          const playerSocket = sockets.find((s) => s.data.playerId === player.id);
+        // Personalized result + rank per player — single pass, O(1) socket lookups
+        for (const player of ls.players.values()) {
+          if (!player.socketId) continue;
+          const playerSocket = io.sockets.sockets.get(player.socketId);
+          if (!playerSocket) continue;
 
-          if (playerSocket) {
-            playerSocket.emit('question:result', {
-              correctIndices,
-              answerCounts,
-              yourAnswer: playerResponse?.answerIndex ?? -1,
-              yourPoints: playerResponse?.pointsAwarded ?? 0,
-              isCorrect: playerResponse
-                ? correctIndices.includes(playerResponse.answerIndex)
-                : false,
-            });
-          }
+          const response = ls.currentResponses.get(player.id);
+          playerSocket.emit('question:result', {
+            correctIndices,
+            answerCounts,
+            yourAnswer: response?.answerIndex ?? -1,
+            yourPoints: response?.pointsAwarded ?? 0,
+            isCorrect: response ? correctIndices.includes(response.answerIndex) : false,
+          });
+          playerSocket.emit('leaderboard:update', {
+            top10,
+            yourRank: rankByPlayerId.get(player.id) ?? 0,
+            yourScore: player.totalScore,
+          });
         }
 
-        // Send answer distribution to host
         io.to(`host:${sessionId}`).emit('question:result', {
           correctIndices,
           answerCounts,
-          totalResponses: responses.length,
+          totalResponses: ls.answered.size,
         });
 
-        // Send leaderboard
-        const leaderboard = await prisma.player.findMany({
-          where: { sessionId },
-          orderBy: { totalScore: 'desc' },
-          take: 10,
-          select: { id: true, nickname: true, totalScore: true },
-        });
-
-        const allPlayers = await prisma.player.findMany({
-          where: { sessionId },
-          orderBy: { totalScore: 'desc' },
-          select: { id: true },
-        });
-
-        // Send personalized rank to each player
-        for (const player of players) {
-          const rank = allPlayers.findIndex((p) => p.id === player.id) + 1;
-          const sockets = await io.in(`session:${sessionId}`).fetchSockets();
-          const playerSocket = sockets.find((s) => s.data.playerId === player.id);
-
-          if (playerSocket) {
-            playerSocket.emit('leaderboard:update', {
-              top10: leaderboard,
-              yourRank: rank,
-              yourScore: player.totalScore + (player.responses[0]?.pointsAwarded ?? 0),
-            });
-          }
-        }
-
-        // Send leaderboard to host
         io.to(`host:${sessionId}`).emit('leaderboard:update', {
-          top10: leaderboard,
-          totalPlayers: allPlayers.length,
+          top10,
+          totalPlayers: ls.players.size,
         });
       } catch (err) {
         console.error('host:reveal error:', err);
@@ -385,47 +321,26 @@ export function setupSocket(io: Server) {
         const sessionId = socket.data.sessionId;
         if (!sessionId || !socket.data.isHost) return;
 
-        const session = await prisma.session.findUnique({
-          where: { id: sessionId },
-          include: {
-            quiz: {
-              include: {
-                questions: {
-                  orderBy: { order: 'asc' },
-                  include: { answers: { orderBy: { index: 'asc' } } },
-                },
-              },
-            },
-          },
-        });
+        const ls = getSession(sessionId);
+        if (!ls) return;
 
-        if (!session) return;
+        const nextIndex = ls.currentQuestionIndex + 1;
 
-        const nextIndex = session.currentQuestionIndex + 1;
-        const questions = session.quiz.questions;
-
-        if (nextIndex >= questions.length) {
-          // End the session
-          await endSession(io, sessionId);
+        if (nextIndex >= ls.questions.length) {
+          await endSession(io, ls);
           return;
         }
 
+        // Lifecycle transition — kept synchronous for restart resync
         await prisma.session.update({
           where: { id: sessionId },
           data: { currentQuestionIndex: nextIndex, status: 'ACTIVE' },
         });
 
-        const nextQ = questions[nextIndex];
-        sendQuestion(io, sessionId, nextQ, nextIndex, questions.length);
+        sendQuestion(io, ls, nextIndex);
       } catch (err) {
         console.error('host:next error:', err);
       }
-    });
-
-    // ─── Host skips a question ─────────────────────────────────────
-    socket.on('host:skip', async () => {
-      // Same as host:next
-      socket.emit('host:next');
     });
 
     // ─── Host ends the session ─────────────────────────────────────
@@ -433,7 +348,9 @@ export function setupSocket(io: Server) {
       try {
         const sessionId = socket.data.sessionId;
         if (!sessionId || !socket.data.isHost) return;
-        await endSession(io, sessionId);
+        const ls = getSession(sessionId);
+        if (!ls) return;
+        await endSession(io, ls);
       } catch (err) {
         console.error('host:end error:', err);
       }
@@ -441,7 +358,11 @@ export function setupSocket(io: Server) {
 
     // ─── Disconnect ────────────────────────────────────────────────
     socket.on('disconnect', () => {
-      playerSockets.delete(socket.id);
+      const { sessionId, playerId } = socket.data as { sessionId?: string; playerId?: string };
+      if (sessionId && playerId) {
+        const ls = getSession(sessionId);
+        if (ls) detachSocket(ls, playerId, socket.id);
+      }
       console.log(`🔌 Socket disconnected: ${socket.id}`);
     });
   });
@@ -449,79 +370,101 @@ export function setupSocket(io: Server) {
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
-interface QuestionData {
-  id: string;
-  prompt: string;
-  mediaUrl: string | null;
-  timeLimit: number;
-  answers: { index: number; text: string }[];
+// Throttled lobby broadcast: leading + trailing edge, max ~3/s per session.
+// Mid-game (the mass rejoin at host:start) only the host needs the list.
+function broadcastLobby(io: Server, ls: LiveSession) {
+  if (ls.status !== 'LOBBY') {
+    io.to(`host:${ls.id}`).emit('lobby:update', { players: getLobbyPlayers(ls) });
+    return;
+  }
+
+  if (ls.lobbyBroadcastTimer) {
+    ls.lobbyBroadcastPending = true;
+    return;
+  }
+
+  io.to(`session:${ls.id}`).emit('lobby:update', { players: getLobbyPlayers(ls) });
+  ls.lobbyBroadcastTimer = setTimeout(() => {
+    ls.lobbyBroadcastTimer = null;
+    if (ls.lobbyBroadcastPending) {
+      ls.lobbyBroadcastPending = false;
+      broadcastLobby(io, ls);
+    }
+  }, LOBBY_BROADCAST_THROTTLE_MS);
 }
 
-function sendQuestion(
-  io: Server,
-  sessionId: string,
-  question: QuestionData & { answers: Array<{ index: number; text: string; imageUrl: string | null; isCorrect: boolean }> },
-  index: number,
-  totalQuestions: number
-) {
+function sendQuestion(io: Server, ls: LiveSession, index: number) {
+  const question = ls.questions[index];
   const timeLimitMs = question.timeLimit * 1000;
-  const startedAt = Date.now();
 
-  // Clear previous timer
-  const prev = sessionTimers.get(sessionId);
-  if (prev) clearTimeout(prev.timeout);
-
-  // Set auto-reveal timeout
+  // Auto-broadcast that time is up (host can still manually reveal)
   const timeout = setTimeout(() => {
-    // Auto-broadcast that time is up (host can still manually reveal)
-    io.to(`session:${sessionId}`).emit('question:timeup', { index });
+    io.to(`session:${ls.id}`).emit('question:timeup', { index });
   }, timeLimitMs + 500);
 
-  sessionTimers.set(sessionId, {
-    questionId: question.id,
-    timeLimitMs,
-    startedAt,
-    timeout,
-  });
+  startQuestion(ls, index, timeout);
 
-  // Update session with question start time
-  prisma.session.update({
-    where: { id: sessionId },
-    data: { questionStartedAt: new Date(startedAt) },
-  }).catch(console.error);
+  // Persisted so reconnecting clients / a restarted server can resync
+  prisma.session
+    .update({ where: { id: ls.id }, data: { questionStartedAt: new Date(ls.timer!.startedAt) } })
+    .catch(console.error);
 
   // Broadcast to everyone in the session (answers without isCorrect)
-  io.to(`session:${sessionId}`).emit('question:show', {
+  io.to(`session:${ls.id}`).emit('question:show', {
     index,
     prompt: question.prompt,
     media: question.mediaUrl,
     answers: question.answers.map((a) => ({ index: a.index, text: a.text })),
     timeLimit: question.timeLimit,
-    serverStartTs: startedAt,
-    totalQuestions,
+    serverStartTs: ls.timer!.startedAt,
+    totalQuestions: ls.questions.length,
   });
 }
 
-async function endSession(io: Server, sessionId: string) {
-  const timer = sessionTimers.get(sessionId);
-  if (timer) {
-    clearTimeout(timer.timeout);
-    sessionTimers.delete(sessionId);
+// After a server restart mid-question, recreate the timer from the persisted
+// start time so the round can finish; if time already ran out, leave it null —
+// late answers are rejected and the host can still reveal/advance.
+function resumeTimerIfNeeded(io: Server, ls: LiveSession) {
+  if (ls.status !== 'ACTIVE' || ls.timer) return;
+  const question = ls.questions[ls.currentQuestionIndex];
+  const startedAt = ls.persistedQuestionStartedAt;
+  if (!question || !startedAt) return;
+
+  const timeLimitMs = question.timeLimit * 1000;
+  const remaining = timeLimitMs + 500 - (Date.now() - startedAt);
+  if (remaining <= 0) return;
+
+  const index = ls.currentQuestionIndex;
+  const timeout = setTimeout(() => {
+    io.to(`session:${ls.id}`).emit('question:timeup', { index });
+  }, remaining);
+
+  ls.timer = { questionId: question.id, timeLimitMs, startedAt, timeout };
+}
+
+async function endSession(io: Server, ls: LiveSession) {
+  if (ls.status === 'FINISHED') return; // double-end guard
+  ls.status = 'FINISHED';
+  clearQuestionTimeout(ls);
+
+  // All responses/scores must land before results become queryable —
+  // session:final triggers the results/CSV pages, which read Postgres.
+  const clean = await waitForCleanFlush(ls);
+  if (!clean) {
+    console.error(
+      `⚠️ Session ${ls.id}: final flush incomplete — results may be missing recent answers`
+    );
   }
 
   await prisma.session.update({
-    where: { id: sessionId },
+    where: { id: ls.id },
     data: { status: 'FINISHED', endedAt: new Date() },
   });
 
-  const leaderboard = await prisma.player.findMany({
-    where: { sessionId },
-    orderBy: { totalScore: 'desc' },
-    select: { id: true, nickname: true, totalScore: true },
+  io.to(`session:${ls.id}`).emit('session:final', {
+    sessionId: ls.id,
+    leaderboard: getLeaderboard(ls).sorted,
   });
 
-  io.to(`session:${sessionId}`).emit('session:final', {
-    sessionId,
-    leaderboard,
-  });
+  deleteSession(ls.id);
 }

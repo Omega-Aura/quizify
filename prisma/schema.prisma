@@ -3,8 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Unpooled connection used only by `prisma migrate` — PgBouncer transaction
+  // mode (Neon's -pooler endpoint) cannot run migrations. Locally this is the
+  // same URL as DATABASE_URL.
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ─── Users ───────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth';
 import { quizRoutes } from './routes/quiz';
 import { sessionRoutes } from './routes/session';
 import { setupSocket } from './socket/handlers';
+import { startFlusher, startTtlSweep, flushAllSessions } from './lib/sessionStore';
 
 // ─── Load environment ────────────────────────────────────────────────
 config();
@@ -63,6 +64,14 @@ const io = new SocketIOServer(server, {
 });
 
 setupSocket(io);
+startFlusher();
+startTtlSweep();
+
+// Render sends SIGTERM on deploys — flush unsaved answers before exiting
+process.once('SIGTERM', () => {
+  console.log('SIGTERM received — flushing live sessions before shutdown');
+  void flushAllSessions().finally(() => process.exit(0));
+});
 
 // ─── Start server ────────────────────────────────────────────────────
 server.listen(PORT, () => {
