@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
 
@@ -23,6 +23,13 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(false);
 
+  // Read inside the connect-effect's closure without making it re-run on
+  // every keystroke/join — mirrors the host page's playersRef pattern.
+  const joinedRef = useRef(false);
+  joinedRef.current = joined;
+  const nicknameRef = useRef('');
+  nicknameRef.current = nickname;
+
   const handleJoin = useCallback(() => {
     if (!nickname.trim()) {
       setError('Enter a nickname');
@@ -44,6 +51,17 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
 
   useEffect(() => {
     const socket = getSocket();
+
+    // Re-send player:join whenever the socket (re)connects — a dropped
+    // connection (flaky venue WiFi) loses server-side room membership, so
+    // without this a player who was already joined silently stops getting
+    // lobby:update/question:show until they manually refresh.
+    const onConnect = () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('quizify_token') : null;
+      if (joinedRef.current && nicknameRef.current.trim()) {
+        socket.emit('player:join', { pin, nickname: nicknameRef.current.trim(), token });
+      }
+    };
 
     const onJoined = (data: { playerId: string; sessionId: string; nickname: string }) => {
       setPlayerId(data.playerId);
@@ -71,18 +89,20 @@ export default function JoinPage({ params }: { params: { sessionId: string } }) 
       setConnecting(false);
     };
 
+    socket.on('connect', onConnect);
     socket.on('player:joined', onJoined);
     socket.on('lobby:update', onLobbyUpdate);
     socket.on('question:show', onQuestionShow);
     socket.on('error', onError);
 
     return () => {
+      socket.off('connect', onConnect);
       socket.off('player:joined', onJoined);
       socket.off('lobby:update', onLobbyUpdate);
       socket.off('question:show', onQuestionShow);
       socket.off('error', onError);
     };
-  }, [router, sessionId]);
+  }, [router, sessionId, pin]);
 
   // Cleanup socket on unmount (only if not navigating to play)
   useEffect(() => {

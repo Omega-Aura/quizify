@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSocket, connectSocket } from '@/lib/socket';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import {
   TrophyIcon,
   ControllerIcon,
@@ -100,6 +101,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
   );
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const leaderboardPhaseTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ─── Socket events ────────────────────────────────────────────────
 
@@ -107,6 +109,14 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     const socket = connectSocket();
 
     const onQuestionShow = (data: QuestionData) => {
+      // A pending "show leaderboard" timeout from the previous question must
+      // not fire after we've already moved on — it would flip phase to
+      // LEADERBOARD while the leaderboard state is null, and nothing renders.
+      if (leaderboardPhaseTimerRef.current) {
+        clearTimeout(leaderboardPhaseTimerRef.current);
+        leaderboardPhaseTimerRef.current = null;
+      }
+
       setQuestion(data);
       setSelectedAnswer(null);
       setResult(null);
@@ -146,12 +156,21 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     const onLeaderboardUpdate = (data: LeaderboardData) => {
       setLeaderboard(data);
       setTotalScore(data.yourScore);
-      // Auto show leaderboard after a short delay
-      setTimeout(() => setPhase('LEADERBOARD'), 2000);
+      // Auto show leaderboard after a short delay — cancellable, since the
+      // host may advance to the next question before this fires.
+      if (leaderboardPhaseTimerRef.current) clearTimeout(leaderboardPhaseTimerRef.current);
+      leaderboardPhaseTimerRef.current = setTimeout(() => {
+        leaderboardPhaseTimerRef.current = null;
+        setPhase('LEADERBOARD');
+      }, 2000);
     };
 
     const onSessionFinal = (data: { sessionId: string; leaderboard: LeaderboardEntry[] }) => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (leaderboardPhaseTimerRef.current) {
+        clearTimeout(leaderboardPhaseTimerRef.current);
+        leaderboardPhaseTimerRef.current = null;
+      }
       setFinalLeaderboard(data.leaderboard);
       setPhase('FINISHED');
     };
@@ -178,14 +197,23 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     socket.on('session:final', onSessionFinal);
     socket.on('question:timeup', onTimeUp);
 
-    // Re-join the session room — the socket may have been disconnected/reconnected
-    // during Next.js page navigation, so the new socket is not in any room.
-    const pin = sessionStorage.getItem(`pin_${sessionId}`) || '';
-    const nickname = sessionStorage.getItem(`nickname_${sessionId}`) || '';
-    const token = typeof window !== 'undefined' ? localStorage.getItem('quizify_token') : null;
-    if (pin && nickname) {
-      socket.emit('player:join', { pin, nickname, token });
-    }
+    // Re-join the session room on every connection — the initial one (e.g.
+    // after Next.js page navigation gave us a fresh, unjoined socket) and
+    // any automatic reconnect after a dropped connection (flaky venue WiFi
+    // is common with hundreds of phones on one network). Socket.io rooms
+    // and per-connection server state don't survive a reconnect, so without
+    // this a player goes silently deaf to all further events until they
+    // manually refresh the page.
+    const rejoin = () => {
+      const pin = sessionStorage.getItem(`pin_${sessionId}`) || '';
+      const nickname = sessionStorage.getItem(`nickname_${sessionId}`) || '';
+      const token = typeof window !== 'undefined' ? localStorage.getItem('quizify_token') : null;
+      if (pin && nickname) {
+        socket.emit('player:join', { pin, nickname, token });
+      }
+    };
+    socket.on('connect', rejoin);
+    if (socket.connected) rejoin();
 
     // Check for pending question data stored by the join page
     // (the first question:show event is consumed by the join page before navigation)
@@ -200,6 +228,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     }
 
     return () => {
+      socket.off('connect', rejoin);
       socket.off('question:show', onQuestionShow);
       socket.off('player:answer:late', onAnswerLate);
       socket.off('player:answer:received', onAnswerReceived);
@@ -208,6 +237,7 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
       socket.off('session:final', onSessionFinal);
       socket.off('question:timeup', onTimeUp);
       if (timerRef.current) clearInterval(timerRef.current);
+      if (leaderboardPhaseTimerRef.current) clearTimeout(leaderboardPhaseTimerRef.current);
     };
   }, [sessionId]);
 
@@ -517,5 +547,8 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
     );
   }
 
-  return null;
+  // Defensive fallback — should be unreachable given the phase transitions
+  // above, but never render blank if state ever ends up inconsistent
+  // (e.g. mid-resync after a dropped connection).
+  return <LoadingScreen label="Syncing..." />;
 }

@@ -79,7 +79,13 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
     if (!token) return;
 
     const socket = connectSocket();
-    socket.emit('host:join', { sessionId, token });
+
+    // Re-send host:join on every connection (initial + any reconnect after a
+    // dropped connection) — server-side room membership doesn't survive a
+    // reconnect, so without this the host silently stops receiving updates.
+    const onConnect = () => socket.emit('host:join', { sessionId, token });
+    socket.on('connect', onConnect);
+    if (socket.connected) onConnect();
 
     socket.on('host:joined', (data: any) => {
       setPin(data.pin);
@@ -128,6 +134,7 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
     });
 
     return () => {
+      socket.off('connect', onConnect);
       socket.off('host:joined');
       socket.off('lobby:update');
       socket.off('question:show');
