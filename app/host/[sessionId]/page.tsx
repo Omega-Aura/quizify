@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { connectSocket, getSocket, disconnectSocket } from '@/lib/socket';
+import { connectSocket, getSocket, disconnectSocket, getServerNow } from '@/lib/socket';
 import { TrophyIcon, PartyPopperIcon, ButtonPlayIcon } from '@/components/icons';
 import { QRCodeSVG } from 'qrcode.react';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -103,11 +103,13 @@ export default function HostPage({ params }: { params: { sessionId: string } }) 
       setAnswerCount({ answered: 0, total: playersRef.current.length });
       setAnswerCounts({});
 
-      // Countdown synced to the server's question start timestamp
+      // Countdown synced to the server's question start timestamp — measured
+      // against getServerNow() (not raw Date.now()) so a skewed device clock
+      // doesn't make the host's timer disagree with players'.
       if (timerRef.current) clearInterval(timerRef.current);
-      const startTime = data.serverStartTs || Date.now();
+      const startTime = data.serverStartTs || getServerNow();
       timerRef.current = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
+        const elapsed = (getServerNow() - startTime) / 1000;
         const remaining = Math.max(0, data.timeLimit - elapsed);
         setTimeLeft(remaining);
         if (remaining <= 0 && timerRef.current) clearInterval(timerRef.current);

@@ -29,6 +29,15 @@ export function setupSocket(io: Server) {
   io.on('connection', (socket: Socket) => {
     console.log(`🔌 Socket connected: ${socket.id}`);
 
+    // ─── Clock sync ───────────────────────────────────────────────
+    // Countdown timers (question:show's serverStartTs) are compared against
+    // each client's own Date.now(), so any device with a skewed system clock
+    // would otherwise show a different remaining time than everyone else.
+    // Round-trip echo lets each client estimate its offset from server time.
+    socket.on('time:sync', (clientSentAt: number) => {
+      socket.emit('time:sync:response', { clientSentAt, serverTime: Date.now() });
+    });
+
     // ─── Player joins a session ────────────────────────────────────
     socket.on('player:join', async (data: { pin: string; nickname: string; token?: string }) => {
       try {

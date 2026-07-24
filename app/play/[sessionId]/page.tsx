@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSocket, connectSocket } from '@/lib/socket';
+import { getSocket, connectSocket, getServerNow } from '@/lib/socket';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import {
   TrophyIcon,
@@ -125,11 +125,13 @@ export default function PlayPage({ params }: { params: { sessionId: string } }) 
       setExpired(false);
       setTimeLeft(data.timeLimit);
 
-      // Start countdown using the server timestamp for proper sync
+      // Start countdown using the server timestamp for proper sync — measured
+      // against getServerNow() (not raw Date.now()) so a skewed device clock
+      // doesn't make this player's timer disagree with everyone else's.
       if (timerRef.current) clearInterval(timerRef.current);
-      const startTime = data.serverStartTs || Date.now();
+      const startTime = data.serverStartTs || getServerNow();
       timerRef.current = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
+        const elapsed = (getServerNow() - startTime) / 1000;
         const remaining = Math.max(0, data.timeLimit - elapsed);
         setTimeLeft(remaining);
         if (remaining <= 0) {
